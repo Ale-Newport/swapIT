@@ -1,0 +1,177 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-canvas: #fafafa;
+  --color-panel: #ffffff;
+  --color-line: #e5e7eb;
+  --color-line-strong: #d4d7dd;
+  --color-ink: #111113;
+  --color-ink-soft: #52525b;
+  --color-ink-faint: #8b8b93;
+  --color-accent: #2563eb;
+  --color-accent-soft: #eff4ff;
+  --color-danger: #b42318;
+  --color-danger-soft: #fef3f2;
+  --color-success: #067647;
+  --color-success-soft: #ecfdf3;
+  --color-warn: #b54708;
+  --color-warn-soft: #fffaeb;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
+
+  --radius-card: 10px;
+}
+
+/* Dark mode is a secondary path — light is the designed default. */
+.dark {
+  --color-canvas: #0f0f11;
+  --color-panel: #17171a;
+  --color-line: #26262b;
+  --color-line-strong: #34343b;
+  --color-ink: #f4f4f5;
+  --color-ink-soft: #a1a1aa;
+  --color-ink-faint: #71717a;
+  --color-accent: #6b9bff;
+  --color-accent-soft: #1a2338;
+  --color-danger: #f97066;
+  --color-danger-soft: #2a1614;
+  --color-success: #47cd89;
+  --color-success-soft: #0f2a1d;
+  --color-warn: #f79009;
+  --color-warn-soft: #2b1d0a;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  cursor: default;
+}
+
+/* The app is a document viewer, not a web page: no accidental text selection
+   on chrome, but real selection inside content areas. */
+body,
+button,
+[role='button'] {
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable],
+.selectable,
+.selectable * {
+  user-select: text;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-ink-faint) 32%, transparent);
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-ink-faint) 55%, transparent);
+  background-clip: content-box;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@keyframes tb-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-in {
+  animation: tb-fade-in 140ms ease-out;
+}
+
+@keyframes tb-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-pop {
+  animation: tb-scale-in 130ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes tb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: tb-spin 900ms linear infinite;
+}
+
+@keyframes tb-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(340%);
+  }
+}
+.animate-indeterminate {
+  animation: tb-indeterminate 1.1s ease-in-out infinite;
+}
+
+/* The window uses a translucent macOS title bar; this strip is draggable. */
+.titlebar-drag {
+  -webkit-app-region: drag;
+}
+.titlebar-nodrag {
+  -webkit-app-region: no-drag;
+}
+
+.checkerboard {
+  background-image:
+    linear-gradient(45deg, #eceef1 25%, transparent 25%),
+    linear-gradient(-45deg, #eceef1 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eceef1 75%),
+    linear-gradient(-45deg, transparent 75%, #eceef1 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+.dark .checkerboard {
+  background-image:
+    linear-gradient(45deg, #232328 25%, transparent 25%),
+    linear-gradient(-45deg, #232328 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #232328 75%),
+    linear-gradient(-45deg, transparent 75%, #232328 75%);
+}

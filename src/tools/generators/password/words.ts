@@ -1,0 +1,116 @@
+/**
+ * The passphrase word list: short, common, easy to read aloud and to retype.
+ * Nothing here is a proper noun and nothing is longer than eight letters.
+ *
+ * The size of this list is what the passphrase entropy estimate is built on, so
+ * duplicates are removed rather than silently inflating the count.
+ */
+const RAW = `
+acorn alder alley alpaca amber amble anchor antler anvil apple
+apricot apron arcade arena argue arrow aspen atlas attic avenue
+avocado awning axle azure badge badger bagel bakery balance balcony
+balloon bamboo banana banjo bargain barge bark barley barrel basil
+basket batter bay bazaar beacon beaker beaver beech beetle beige
+bell bellows belt bench berry bicycle binder birch biscuit bison
+bistro blanket bloom blossom bobbin bobcat bolt bonnet boot borrow
+bottle bounce bowl bracket bramble branch brave bread briar brick
+bridge bridle bright brine brisk brisket bronze broom broth brush
+bucket buckle bud buffalo bugle build bulb bullfrog bumper bunker
+burdock butter button cabbage cabin cable cactus cake caliper calm
+camel camera camp candle candy canoe canvas canyon capsule carriage
+carrot carry cart carton cashew castle cauldron cavern cedar celery
+cellar chain chair chalk chapel chart chase cheese cherish cherry
+chest chili chilly chimney chisel chive chuckle cider cinnamon circle
+citadel citrus clamp clasp cleaver clever cliff climb clock closet
+clover cobalt cobra cocoa coconut coffee coil collect compass compose
+condor cookie copper coral cord cork corn cosmic cottage cove
+cover coyote cracker cradle craft crane crate crawl crayon cream
+create creek crest cricket crimson crisp crocus crown cruise crumb
+crutch cumin cup curious curry curtain cushion custard cymbal dagger
+daisy dance daring date dawn dazzle deliver delta depart depot
+dial diary diner dingo discover dish dock dolphin domino donkey
+door dorm dough drawer drift drum dumpling dune dusk dusty
+eager eagle early easel easy echo egret elder elk embark
+embassy ember emerald engine envelope explore fabric factory falcon fan
+fancy farm faucet fearless fender fennel fern ferret ferry fiddle
+fig file finch firefly fjord flag flask flicker flint float
+flour flourish fluffy flute flutter fog folder follow forage forest
+forge fork fossil foyer frame fresh fritter frost fudge funnel
+furnace gadget gallery garage garden garlic gate gather gauge gavel
+gazebo gazelle gear gecko gentle giant gibbon ginger giraffe gizmo
+glacier glad glade glass glide globe glove golden gong gopher
+gossip govern grain granary grand granite grape grass gravy greet
+grill grommet grouse grove guide gulch haddock hammer hamper hamster
+handle hangar happy harbor harp harvest hasten hatch haven heath
+hedge hedgehog helmet heron herring hidden hill hinge holly honey
+hook hoop hornet hose hover humble hurry hut igloo iguana
+impala indigo ink inn inspect ivory ivy jackal jacket jade
+jaguar jam jar jelly jigsaw jolly journey juice jumble jungle
+juniper kale kayak keen kelp kestrel ketchup kettle key keyboard
+kiln kind kindle kiosk kite kitten knapsack knife knob koala
+labor ladder lagoon lake lamp lantern lark lasso latch launch
+laurel lavender leaf ledger lemon lemur lens lentil leopard lettuce
+lever lichen lid lighter lilac lily lime linger listen lively
+llama loam lobby lobster locker locket lodge loft lofty loom
+lotus loud lucky lynx magenta magnet magpie mailbox mallard mallet
+manage mango manor mantis manual maple marble march market marmot
+maroon marsh marten mask mast mat mattress meadow measure medal
+meerkat melon merry mesa mighty mill millet mingle minnow mint
+mirror mission mist misty mitten mixer modest mold mole monitor
+moose mop mortar moss motor mountain muffin mug museum mussel
+mustard muster nail napkin narwhal navigate nectar needle net nettle
+newt nightjar nimble noble noodle notebook notice nougat nurture nuthatch
+nutmeg oak oar oasis oatmeal observe ocelot octopus odd offer
+olive onion opal orange orchard oregano organ oriole osprey otter
+outpost oven oyster paddle padlock pail paint palace palette pan
+pancake panda panel panther papaya paper parade parcel parlor parrot
+parsley pasta pastry pause pavilion peach peanut pear pearl pebble
+pecan pedal pelican pencil pendant penguin pepper perch pheasant piano
+pickle pie pier pigeon pillar pillow pin pine pioneer pipe
+piston pitcher pivot plain plank plant plaque plate plateau plaza
+pliers plover plow plum pocket pole polish polite pollen pond
+ponder pony popcorn poplar porpoise port possum pot potato pouch
+practice prairie prawn prepare present pretzel printer prism proud prune
+pudding puffin pulley puma pump pumpkin purse puzzle python quail
+quarry quartz quay quick quiet quill quilt quinoa quiver quokka
+rabbit raccoon racket radar radio radish raft rail raisin rake
+ram ramble ramp ranch rapid rapids rare raven razor ready
+reason recall reckon reed reef reel refuge reindeer relay relish
+render rescue restore reveal rhino rhubarb ribbon rice ridge ring
+risotto river rivet roam roast robe robin rock rocket rod
+roller rooster root rope rose rowan ruby rudder rug rugged
+ruler rumble russet rustic saddle safe saffron sage sail salmon
+salsa sample sanctum sand sandal sapling sapphire sardine satchel saucer
+savanna scale scallop scarf scarlet scatter scissors scone scooter screen
+screw scroll seagull seal search seat sepia sequoia sesame settle
+shale shark sheep shelf shelter sherbet shield shimmer shiny shipyard
+shop shore shovel shrew shrimp shuffle shutter sieve sign signal
+silent silo silt silver simmer simple sink siskin skate sketch
+ski skunk sky skylark slate sled sleepy sleet sleeve slender
+slipper sloth smooth snail snappy snow socket sofa solid soothe
+sorbet soup sour spade spanner sparkle sparrow spatula speaker spider
+spinach spindle spool spoon spring sprint sprocket sprout spruce spry
+squash squid stable stack stamp stapler stargaze starling station statue
+steady steer stencil stereo stew stick stitch stoat stone stool
+stork storm stormy stove strap straw stream stride string stroll
+strudel studio study sturdy sturgeon stylus suburb sugar suitcase summit
+summon sunny sunset survey sustain swallow swamp swan sweet swift
+swirl switch syrup table tablet taco tadpole tally tank tape
+tapir tart tavern teal teapot temper temple tender tent termite
+terrace theater thermos thicket thimble thistle thorn thread thrive thrush
+thunder thyme ticket tide tidy tiger tile timber timer timid
+tin tinker tiny toad toast tofu tomato tongs toolbox topaz
+torch tortoise toucan tough tour towel tower toy trace tractor
+trail trailer tranquil travel tray tripod trolley trombone trophy trout
+trowel truck truffle trumpet trunk trusty tub tube tumble tundra
+tunnel turbine turnip turtle umbrella unfold unite unwind upbeat uphold
+urban urchin usher valley valve vanilla vanish vase vault venture
+veranda vessel vest village vine violet violin viper visit visor
+vivid vixen vulture waffle wagon wallaby wallet walnut walrus wand
+wander warbler wardrobe warm wary watch weasel weave weevil welcome
+whale wharf wheel whisper whistle widen wild willow wind window
+windy winter wire wise witty wolf wombat wonder wood workshop
+wren wrench yak yarn yield yogurt young zebra zesty zipper
+`;
+
+export const WORDS: string[] = Array.from(new Set(RAW.trim().split(/\s+/))).sort();
