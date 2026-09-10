@@ -34,7 +34,9 @@
       "assetProtocol": {
         "enable": true,
         "scope": {
-          "allow": ["**"],
+          "allow": [
+            "**"
+          ],
           "requireLiteralLeadingDot": false
         }
       }
@@ -42,7 +44,9 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app"],
+    "targets": [
+      "app"
+    ],
     "category": "Utility",
     "shortDescription": "Local toolkit for everyday file tasks",
     "longDescription": "Toolbox is a fast, local-first collection of small utilities for files, images, video, audio, PDFs, QR codes, SVG, text and development tasks.",
@@ -55,7 +59,8 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "minimumSystemVersion": "11.0"
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
     }
   }
 }

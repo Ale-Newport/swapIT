@@ -19,7 +19,8 @@
     "rust:test": "cd src-tauri && cargo test",
     "check:all": "npm run typecheck && npm run lint && npm run test && npm run rust:clippy && npm run rust:test",
     "build:app": "tauri build --bundles app",
-    "build:dmg": "npm run build:app && bash scripts/make-dmg.sh"
+    "build:dmg": "npm run build:app && bash scripts/make-dmg.sh",
+    "install:app": "npm run build:app && bash scripts/install-app.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

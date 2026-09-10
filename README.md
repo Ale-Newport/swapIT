@@ -124,12 +124,48 @@ it at a binary elsewhere on disk.
 git clone <this repo> toolbox
 cd toolbox
 npm install
+npm run install:app
+```
+
+That builds `Toolbox.app` (about 10 MB) and installs it into `/Applications`, where
+it appears in **Launchpad** and Spotlight like any other app — double-click the icon
+and it opens, no warning. Re-run the same command to update it.
+
+To build a shareable disk image instead:
+
+```bash
 npm run build:dmg
 ```
 
-That produces `src-tauri/target/release/bundle/macos/Toolbox.app` (about 10 MB) and
-`src-tauri/target/release/bundle/dmg/Toolbox_<version>_<arch>.dmg`. Drag the app to
-`/Applications` and launch it.
+| Command | Result |
+| --- | --- |
+| `npm run build:app` | `src-tauri/target/release/bundle/macos/Toolbox.app` |
+| `npm run install:app` | The above, installed into `/Applications` |
+| `npm run build:dmg` | `src-tauri/target/release/bundle/dmg/Toolbox_<version>_<arch>.dmg` |
+
+### About signing
+
+There is no Apple Developer ID here, so the bundle is **ad-hoc signed**
+(`bundle.macOS.signingIdentity: "-"` in `tauri.conf.json`). Without that setting
+Tauri leaves only a partial linker signature — `Info.plist` unbound, no sealed
+resources — which fails `codesign --verify` and can stop the app opening.
+
+Ad-hoc signing is enough for an app you build and install yourself: macOS only
+insists on a notarised Developer ID signature for software that arrives carrying a
+**quarantine** flag, and that flag is set on downloads, not on a local copy.
+`scripts/install-app.sh` strips it regardless.
+
+If you copy the `.dmg` to another Mac and open it there, the app *will* be
+quarantined and macOS will refuse it on first launch. Either right-click the app and
+choose **Open** (then confirm once), or clear the flag:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Toolbox.app
+```
+
+Notarising properly would need a paid Apple Developer account; set
+`APPLE_ID`, `APPLE_PASSWORD` and `APPLE_TEAM_ID` and Tauri will do it during
+`build:app`.
 
 `npm run tauri build` on its own builds only the `.app`. The DMG is a separate script
 on purpose: Tauri's own DMG bundler lays out the installer window by driving Finder
@@ -151,6 +187,7 @@ calls a backend command needs the full app.
 | --- | --- |
 | `npm run tauri dev` | Run the app with hot reload |
 | `npm run build:app` | Produce `Toolbox.app` |
+| `npm run install:app` | Build and install into `/Applications` (Launchpad) |
 | `npm run build:dmg` | Produce `Toolbox.app` and a `.dmg` installer |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run lint` | ESLint |
