@@ -111,6 +111,10 @@ pub struct State {
     pub shortcuts: BTreeMap<String, ShortcutStatus>,
     pub drag_running: bool,
     pub tray: bool,
+    /// Global shortcuts are released while the settings page records a new one, so pressing
+    /// the old combination does not fire it. `suspend_epoch` lets a stale auto-resume be ignored.
+    pub shortcuts_suspended: bool,
+    pub suspend_epoch: u64,
 }
 
 impl State {
@@ -129,6 +133,12 @@ impl State {
 }
 
 pub static STATE: Lazy<Mutex<State>> = Lazy::new(|| Mutex::new(State::default()));
+
+/// Argument the login item is started with: come up quietly in the menu bar.
+pub const BACKGROUND_FLAG: &str = "--background";
+
+/// Longest the shortcuts stay released if the page that asked for it never says it is done.
+const SUSPEND_LIMIT: Duration = Duration::from_secs(60);
 
 /// The folder a hand-off file from the Quick Action may live in.
 pub fn cache_dir() -> std::path::PathBuf {
@@ -155,17 +165,67 @@ pub fn reconcile(app: &AppHandle) {
         let statuses = hotkeys::apply(&handle, &cfg);
         drag::sync(&handle, &cfg);
         let tray_on = tray::sync(&handle, &cfg);
-        let policy = if cfg.show_in_dock {
-            tauri::ActivationPolicy::Regular
-        } else {
-            tauri::ActivationPolicy::Accessory
-        };
-        let _ = handle.set_activation_policy(policy);
+        apply_dock(&handle, &cfg, main_window_visible(&handle));
         if let Ok(mut st) = STATE.lock() {
             st.shortcuts = statuses;
             st.tray = tray_on;
         }
     });
+}
+
+fn main_window_visible(app: &AppHandle) -> bool {
+    app.get_webview_window("main").and_then(|w| w.is_visible().ok()).unwrap_or(false)
+}
+
+fn apply_dock(app: &AppHandle, cfg: &RadialConfig, main_visible: bool) {
+    let policy = if cfg.dock_icon(main_visible) {
+        tauri::ActivationPolicy::Regular
+    } else {
+        tauri::ActivationPolicy::Accessory
+    };
+    let _ = app.set_activation_policy(policy);
+}
+
+/// Put the Dock icon in line with whether the main window is open. `main_visible` is passed in
+/// because the window may not have reported its new state yet when this runs.
+pub fn sync_dock(app: &AppHandle, main_visible: bool) {
+    apply_dock(app, &RadialConfig::load(), main_visible);
+}
+
+/// Re-register the global shortcuts from the saved settings.
+pub fn refresh_shortcuts(app: &AppHandle) {
+    let cfg = RadialConfig::load();
+    let handle = app.clone();
+    let _ = app.run_on_main_thread(move || {
+        let statuses = hotkeys::apply(&handle, &cfg);
+        if let Ok(mut st) = STATE.lock() {
+            st.shortcuts = statuses;
+        }
+    });
+}
+
+/// Release (or take back) the global shortcuts while the settings page records a new one.
+/// A page that never answers cannot leave them off: they come back after `SUSPEND_LIMIT`.
+pub fn suspend_shortcuts(app: &AppHandle, suspended: bool) {
+    let epoch = STATE
+        .lock()
+        .map(|mut st| {
+            st.shortcuts_suspended = suspended;
+            st.suspend_epoch += 1;
+            st.suspend_epoch
+        })
+        .unwrap_or(0);
+    refresh_shortcuts(app);
+    if suspended {
+        let app = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(SUSPEND_LIMIT);
+            let stale = STATE.lock().map(|st| st.shortcuts_suspended && st.suspend_epoch == epoch).unwrap_or(false);
+            if stale {
+                suspend_shortcuts(&app, false);
+            }
+        });
+    }
 }
 
 // ------------------------------------------------------------------ showing
@@ -273,11 +333,43 @@ pub fn on_shortcut_released(app: &AppHandle, kind: &str) {
 
 // ------------------------------------------------------------------ lifecycle
 
-fn open_main_window(app: &AppHandle) {
+/// Bring the main window up. In menu bar mode the Dock icon comes with it.
+pub fn open_main_window(app: &AppHandle) {
+    sync_dock(app, true);
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.show();
         let _ = main.unminimize();
         let _ = main.set_focus();
+    }
+}
+
+/// First thing after startup: show the window, unless this is a login launch that should stay
+/// in the menu bar. The window is created hidden so a quiet launch never flashes it.
+pub fn launch_main_window(app: &AppHandle, background: bool) {
+    if RadialConfig::load().quiet_launch(background) {
+        sync_dock(app, false);
+    } else {
+        open_main_window(app);
+    }
+}
+
+/// A login item written by an earlier version has no `--background` flag, so it would open the
+/// window at every login. Rewrite it — but only when it points at this very executable, so a
+/// development build never takes over the real one's login item.
+pub fn refresh_launch_agent(app: &AppHandle) {
+    use tauri_plugin_autostart::ManagerExt;
+    let Ok(exe) = std::env::current_exe() else { return };
+    let exe = exe.to_string_lossy().to_string();
+    let Some(dir) = dirs::home_dir().map(|h| h.join("Library/LaunchAgents")) else { return };
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let outdated = entries.flatten().any(|e| {
+        e.path().extension().is_some_and(|x| x == "plist")
+            && std::fs::read_to_string(e.path()).is_ok_and(|t| t.contains(&exe) && !t.contains(BACKGROUND_FLAG))
+    });
+    if outdated {
+        let launcher = app.autolaunch();
+        let _ = launcher.disable();
+        let _ = launcher.enable();
     }
 }
 
@@ -342,18 +434,21 @@ pub fn on_radial_window_event(app: &AppHandle, event: &WindowEvent) {
     }
 }
 
-/// Main-window events: closing hides it while the app stays alive for the shortcut.
+/// Main-window events: closing hides it while the app stays alive for the shortcut, the ring
+/// and the menu bar icon.
 pub fn on_main_window_event(window: &tauri::Window, event: &WindowEvent) {
     let app = window.app_handle();
     match event {
         WindowEvent::CloseRequested { api, .. } => {
-            if RadialConfig::load().keep_running {
+            if RadialConfig::load().keeps_running() {
                 api.prevent_close();
                 let _ = window.hide();
+                // Menu bar mode: the Dock icon goes with the window.
+                sync_dock(app, false);
             }
         }
         // The hidden radial window would otherwise keep the process alive forever.
-        WindowEvent::Destroyed if !RadialConfig::load().keep_running => app.exit(0),
+        WindowEvent::Destroyed if !RadialConfig::load().keeps_running() => app.exit(0),
         _ => {}
     }
 }

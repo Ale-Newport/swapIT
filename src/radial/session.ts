@@ -49,18 +49,17 @@ function findById(items: RadialItem[], id: string): RadialItem | undefined {
   return undefined;
 }
 
+/** The menu for these files, with the user's own rings and the helper programs found so far. */
+function menuFor(files: FileInfo[], folder: string | null, intent: string, clipboard: ClipboardSummary | null) {
+  const settings = useSettings.getState().settings;
+  return buildMenu({ files, folder, bins: binsNow() ?? {}, settings, layouts: settings.radialLayouts, intent, clipboard });
+}
+
 /** Rebuild the menu for the current files — used when late information (helper programs) arrives. */
 function rebuild(): void {
   const s = radial.get();
   if (s.phase === 'idle' || s.phase === 'loading') return;
-  const { root, pool } = buildMenu({
-    files: s.files,
-    folder: s.folder,
-    bins: binsNow() ?? {},
-    settings: useSettings.getState().settings,
-    intent: s.session?.intent ?? 'ring',
-    clipboard: lastClipboard,
-  });
+  const { root, pool } = menuFor(s.files, s.folder, s.session?.intent ?? 'ring', lastClipboard);
   // Keep the user where they are: re-find the open sub-rings in the rebuilt tree by id.
   const stack: RadialItem[] = [];
   let level = root;
@@ -100,9 +99,8 @@ export async function openSession(payload: RadialOpenPayload): Promise<void> {
   if (mine !== sequence) return;
   lastClipboard = clipboard;
 
-  const settings = useSettings.getState().settings;
   const known = binsNow();
-  const { root, pool } = buildMenu({ files, folder, bins: known ?? {}, settings, intent: payload.intent, clipboard });
+  const { root, pool } = menuFor(files, folder, payload.intent, clipboard);
   radial.patch({ files, folder, root, pool, stack: [], hover: null, query: '' });
   // First ever open: dim what cannot run as soon as the probe finishes, without having waited for it.
   if (!known) void loadBins().then(() => mine === sequence && rebuild());
@@ -134,8 +132,7 @@ export async function replaceFiles(paths: string[]): Promise<void> {
   const files = await inspectPaths(paths).catch(() => [] as FileInfo[]);
   if (files.length === 0) return;
   const folder = state.folder ?? (await defaultFolders()).desktop;
-  const settings = useSettings.getState().settings;
-  const { root, pool } = buildMenu({ files, folder, bins: binsNow() ?? {}, settings, intent: 'ring', clipboard: lastClipboard });
+  const { root, pool } = menuFor(files, folder, 'ring', lastClipboard);
   radial.patch({ files, root, pool, stack: [], hover: null, query: '' });
 }
 

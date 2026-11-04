@@ -32,12 +32,13 @@ fn build_menu(app: &AppHandle, cfg: &RadialConfig) -> tauri::Result<Menu<tauri::
     }
     let open = MenuItem::with_id(app, "open", "Open Toolbox", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, Some("CmdOrCtrl+,"))?;
+    let customize = MenuItem::with_id(app, "customize", "Customize Rings…", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Toolbox", true, Some("CmdOrCtrl+Q"))?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     Menu::with_items(
         app,
-        &[&items[0], &sep1, &items[1], &items[2], &items[3], &sep2, &open, &settings, &quit],
+        &[&items[0], &sep1, &items[1], &items[2], &items[3], &sep2, &open, &customize, &settings, &quit],
     )
 }
 
@@ -48,6 +49,7 @@ fn on_menu_event(app: &AppHandle, id: &str) {
         "note" => super::show_with_finder(app, Trigger::Tray, "create:markdown", None),
         "record" => super::show_with_finder(app, Trigger::Tray, "record", None),
         "open" => super::open_in_main(app, "/", &[]),
+        "customize" => super::open_in_main(app, "/radial#rings", &[]),
         "settings" => super::open_in_main(app, "/settings", &[]),
         "quit" => app.exit(0),
         _ => {}
@@ -58,7 +60,7 @@ fn on_menu_event(app: &AppHandle, id: &str) {
 /// Main thread only.
 pub fn sync(app: &AppHandle, cfg: &RadialConfig) -> bool {
     let existing = app.tray_by_id(TRAY_ID);
-    if !cfg.menu_bar_icon {
+    if !cfg.tray_visible() {
         if let Some(tray) = existing {
             let _ = tray.set_visible(false);
         }

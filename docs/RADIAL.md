@@ -37,6 +37,8 @@ The Rust side reads these from `settings::load().extra`. Defaults apply when abs
 | `keepRunning` | bool | `true` | closing the main window hides it; the app stays alive for the shortcut |
 | `menuBarIcon` | bool | `true` | tray icon |
 | `showInDock` | bool | `true` | `false` → `ActivationPolicy::Accessory` |
+| `menuBarMode` | bool | `false` | **menu bar only** (see §12): implies `keepRunning` and `menuBarIcon`; the Dock icon exists only while the main window is open; a login launch does not open the window |
+| `radialLayouts` | `{ [kind]: { order: string[]; off: string[] } }` | `{}` | the user's own rings, per kind of file (see §13). Rust ignores it |
 | `radialOpacity`, `radialAccent`, `radialScale`, `radialTheme`, `radialSounds` | – | – | frontend-only appearance prefs; Rust ignores them except `radialTheme` (`auto/light/dark`) which picks the glass appearance |
 
 After `update_settings` succeeds the backend must **reconcile** (re-register
@@ -96,6 +98,11 @@ emit `radial://open`, show, activate.
 `radial_hide({ restoreFocus?: boolean })` — hide the window, emit `radial://hidden`.
 `restoreFocus` (default true) re-activates the app that was frontmost when the
 ring opened (so Finder gets its focus back).
+
+### `radial_suspend_shortcuts`
+`radial_suspend_shortcuts({ suspended: boolean })` — the settings page is recording a new shortcut: unregister every
+global shortcut (`true`) or register them again from the settings (`false`), so pressing the current combination
+does not fire it. Releases itself after 60 s if the page never answers.
 
 ### `radial_release_focus`
 Re-activate the previous app **but keep the window visible** (used when the ring
@@ -315,3 +322,46 @@ The first version had eight petals per page, seven pages and scroll-to-flip. It 
    move, rename, new folder, Trash, screenshots. `catalog/index.test.ts` fails if one of them comes back.
 5. **Typing finds anything**: `MenuModel.pool` holds every action, including those no ring shows and every tool of
    the full app.
+
+## 12. Menu bar mode — the ring without the app open
+
+`menuBarMode: true` makes Toolbox a menu bar utility: only the icon at the top of the screen, and the ring and its
+shortcuts work as they always do.
+
+* `RadialConfig::keeps_running()` and `tray_visible()` are `true` whatever `keepRunning` / `menuBarIcon` say, so the
+  process outlives the window and the icon is always there to bring the window back.
+* **Dock icon only while the window is open.** `RadialConfig::dock_icon(main_visible)` → `ActivationPolicy::Regular`
+  while the main window is shown, `Accessory` the rest of the time (`radial::sync_dock`, called on show, on close
+  and from `reconcile`). Without the mode, `showInDock` decides as before.
+* **Quiet login launch.** The autostart plugin starts the app with `--background` (`radial::BACKGROUND_FLAG`). The
+  main window is created hidden (`"visible": false` in `tauri.conf.json`, and `StateFlags::VISIBLE` is left out of
+  the window-state plugin so a saved "hidden" never decides anything) and `radial::launch_main_window` shows it unless
+  `quiet_launch(background)` — i.e. unless the icon and keep-running can bring it back. Opening Toolbox from
+  Launchpad, the Dock or `open` always shows the window.
+* `radial::refresh_launch_agent` rewrites a login item that points at this very executable but predates the flag.
+  It never touches one that points anywhere else, so a development build cannot take over the installed app's.
+* ⌘Q still quits (it is the Mac convention, and the icon's *Quit Toolbox* does the same). Closing the window with the red button
+  is what leaves the icon behind (⌘W is the app's own “back”).
+* The tray menu gains *Customize Rings…* (`/radial#rings`) next to *Settings…*.
+
+## 13. Your own rings
+
+`src/radial/layouts.ts`. A kind of file (`LayoutKey`: `create` for "nothing selected", `image`, `video`, `audio`,
+`pdf`, `document`, `text` for text/data/code, `svg`, `archive`, `folder`, `mixed`) can have a saved layout:
+
+```ts
+radialLayouts: { image: { order: ['convert:jpg', 'edit:compress', …], off: ['convert:tiff', …] } }
+```
+
+* The editor (`src/radial/LayoutEditor.tsx`, *Radial menu ▸ Your rings*) lists every action a kind can do — the
+  union over a few sample selections (`catalog/samples.ts`) — as one list. What is on, in order, fills the ring: the
+  first five on the first ring and "More ›" for the rest, repeated once more, so **16 actions fit** (5 + 5 + 6, three
+  levels deep, six petals a ring — the rules of §11 still hold). Anything beyond that, or switched off, leaves the
+  rings but stays in `MenuModel.pool`, so typing on the ring still finds it.
+* Without a saved layout nothing changes: the hand-built ring of `filesRoot` / `createRoot` stays. The editor starts
+  from it (what it reaches is on, up to the 16 that fit) and the first change saves a layout.
+* `buildMenu({ layouts })` applies it (`applyLayout`). It tolerates a hand-edited file (`sanitizeLayouts`), ids this
+  selection cannot do (a JPG has no "PNG → JPG"), actions an update adds later (they go last, on only if the standard
+  ring had them) and an empty result (falls back to the standard ring).
+* `MenuModel` also returns `standard` (the hand-built first ring) and `candidates` (every action of the kind).
+

@@ -55,6 +55,10 @@ export interface AppSettings {
   keepRunning?: boolean;
   menuBarIcon?: boolean;
   showInDock?: boolean;
+  /** Toolbox lives in the menu bar: no Dock icon, no window until you ask for it. */
+  menuBarMode?: boolean;
+  /** The user's own rings, per kind of file (see src/radial/layouts.ts). */
+  radialLayouts?: Record<string, { order: string[]; off: string[] }>;
   radialOpacity?: number;
   radialAccent?: string;
   radialTheme?: 'auto' | 'light' | 'dark';

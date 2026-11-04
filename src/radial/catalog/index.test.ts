@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { AppSettings } from '@/core/bridge';
 import type { FileInfo, FileKind } from '@/core/types';
+import { LAYOUT_TYPES, RING_CAPACITY, layoutKeyFor, leaves, type RingLayouts } from '../layouts';
 import { flattenItems, searchItems } from '../menu';
 import type { RadialItem } from '../model';
 import { buildMenu, type MenuModel } from './index';
+import { actionsFor } from './samples';
 import type { Bins } from './util';
 
 const ALL: Bins = {
@@ -35,12 +37,13 @@ function file(name: string, kind: FileKind, size = 1000): FileInfo {
   };
 }
 
-function build(files: FileInfo[], bins: Bins = ALL): MenuModel {
+function build(files: FileInfo[], bins: Bins = ALL, layouts?: RingLayouts): MenuModel {
   return buildMenu({
     files,
     folder: '/Users/demo/Desktop',
     bins,
     settings,
+    layouts,
     intent: 'ring',
     clipboard: { kind: 'text', preview: 'hello', count: 5 },
   });
@@ -259,3 +262,105 @@ describe('with nothing selected', () => {
     expect(searchItems(menu.pool, 'json formatter').length).toBeGreaterThan(0);
   });
 });
+
+describe('your own rings', () => {
+  const png = [file('a.png', 'image')];
+
+  it('change nothing until you make one', () => {
+    const plain = build(png);
+    expect(rootIds(build(png, ALL, {}))).toEqual(rootIds(plain));
+    expect(rootIds(build(png, ALL, { video: { order: ['convert:mp4'], off: [] } }))).toEqual(rootIds(plain));
+    expect(plain.standard).toBe(plain.root);
+  });
+
+  it('put what is on in your order, and keep the rest of the ring in More', () => {
+    const everything = actionsFor('image').candidates.map((i) => i.id);
+    const order = ['edit:compress', 'convert:webp', ...everything.filter((id) => id !== 'edit:compress' && id !== 'convert:webp')];
+    const menu = build(png, ALL, { image: { order, off: [] } });
+    expect(rootIds(menu).slice(0, 2)).toEqual(['edit:compress', 'convert:webp']);
+    expect(rootIds(menu)).toHaveLength(6);
+    expect(rootIds(menu)[5]).toBe('menu:more');
+  });
+
+  it('take switched-off actions off every ring but not out of search', () => {
+    const everything = actionsFor('image').candidates.map((i) => i.id);
+    const menu = build(png, ALL, { image: { order: everything, off: ['convert:jpg', 'convert:webp'] } });
+    expect(reachable(menu)).not.toContain('convert:jpg');
+    expect(reachable(menu)).not.toContain('convert:webp');
+    expect(searchItems(menu.pool, 'jpg').map((i) => i.id)).toContain('convert:jpg');
+  });
+
+  it('only touch the kind they were made for', () => {
+    const everything = actionsFor('image').candidates.map((i) => i.id);
+    const layouts: RingLayouts = { image: { order: everything, off: everything } };
+    expect(rootIds(build([file('a.mp4', 'video')], ALL, layouts))).toEqual(rootIds(build([file('a.mp4', 'video')])));
+  });
+
+  it('survive a selection that cannot do some of their actions', () => {
+    // Saved while looking at a PNG; used on a JPG, where “PNG → JPG” does not exist.
+    const menu = build([file('a.jpg', 'image')], ALL, { image: { order: ['convert:jpg', 'convert:png', 'edit:compress'], off: [] } });
+    expect(rootIds(menu).slice(0, 2)).toEqual(['convert:png', 'edit:compress']);
+  });
+
+  it('can never leave the ring empty', () => {
+    const everything = actionsFor('image').candidates.map((i) => i.id);
+    const menu = build(png, ALL, { image: { order: everything, off: everything } });
+    expect(menu.root.length).toBeGreaterThan(0);
+    expect(rootIds(menu)).toEqual(rootIds(build(png)));
+  });
+
+  it('keep every ring within six petals and three levels, whatever is on', () => {
+    for (const { key } of LAYOUT_TYPES) {
+      const { candidates } = actionsFor(key);
+      const layout = { order: candidates.map((i) => i.id), off: [] as string[] };
+      const files = key === 'create' ? [] : sampleFilesFor(key);
+      const menu = build(files, ALL, { [key]: layout } as RingLayouts);
+      expect(menu.root.length, key).toBeLessThanOrEqual(6);
+      expect(depth(menu.root), key).toBeLessThanOrEqual(3);
+      expect(leaves(menu.root).length, key).toBeLessThanOrEqual(RING_CAPACITY);
+    }
+  });
+});
+
+describe('what each kind of file can be customised with', () => {
+  for (const { key, label } of LAYOUT_TYPES) {
+    it(`${label}: lists unique actions, including everything the standard ring reaches`, () => {
+      const { candidates, shipped, standard } = actionsFor(key);
+      expect(candidates.length).toBeGreaterThan(0);
+      const ids = candidates.map((i) => i.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(candidates.every((i) => !i.children)).toBe(true);
+      for (const id of shipped) expect(ids, id).toContain(id);
+      expect(leaves(standard).length).toBeGreaterThan(0);
+    });
+  }
+
+  it('offers PDFs the merge that needs two files, and images every format', () => {
+    expect(actionsFor('pdf').candidates.map((i) => i.id)).toContain('pdf:merge');
+    const image = actionsFor('image').candidates.map((i) => i.id);
+    expect(image).toEqual(expect.arrayContaining(['convert:png', 'convert:jpg', 'convert:webp', 'edit:compress']));
+  });
+
+  it('uses the same layout key the ring does', () => {
+    for (const [, files] of scenarios) {
+      const key = layoutKeyFor(files);
+      expect(LAYOUT_TYPES.some((t) => t.key === key)).toBe(true);
+    }
+  });
+});
+
+function sampleFilesFor(key: string): FileInfo[] {
+  const byKey: Record<string, FileInfo[]> = {
+    image: [file('a.png', 'image')],
+    video: [file('a.mov', 'video')],
+    audio: [file('a.wav', 'audio')],
+    pdf: [file('a.pdf', 'pdf'), file('b.pdf', 'pdf')],
+    document: [file('a.docx', 'document')],
+    text: [file('a.md', 'text')],
+    svg: [file('a.svg', 'svg')],
+    archive: [file('a.zip', 'archive')],
+    folder: [file('Photos', 'folder')],
+    mixed: [file('a.png', 'image'), file('b.mp4', 'video')],
+  };
+  return byKey[key] ?? [];
+}

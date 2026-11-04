@@ -44,6 +44,14 @@ pub fn radial_ready(app: AppHandle, session: u64) -> AppResult<()> {
     Ok(())
 }
 
+/// The settings page is recording a new shortcut (`true`) or is done (`false`): while it
+/// records, the current shortcuts are released so pressing one does not fire it.
+#[tauri::command]
+pub fn radial_suspend_shortcuts(app: AppHandle, suspended: bool) -> AppResult<()> {
+    super::suspend_shortcuts(&app, suspended);
+    Ok(())
+}
+
 #[tauri::command]
 pub fn radial_release_focus(app: AppHandle) -> AppResult<()> {
     window::release_focus(&app);

@@ -103,6 +103,18 @@ Theme (follow macOS / light / dark), accent colour and glass strength are in *Ra
 *Automation ▸ Finder* — to read your selection and the front window's folder;
 *Microphone* — for *Record audio*. The drag gesture watches mouse events only and needs nothing.
 
+**Make it yours.** In *Settings ▸ Radial menu & menu bar* (and on the *Radial menu* page) click a shortcut and press
+the keys you want — ring, new note, record audio each have their own. *Radial menu ▸ Your rings* lets you choose, for
+every kind of file (images, video, audio, PDF, documents, text and data, SVG, archives, folders, mixed, and
+"nothing selected"), which actions the ring offers and in what order: switch them on or off, drag to reorder, and
+watch the ring change next to the list. The first five that are on sit on the ring, the next ones inside *More ›*;
+whatever you switch off is still found by typing.
+
+**Without the app open.** Choose *Menu bar only* and Toolbox lives as an icon at the top of the screen: no Dock icon,
+no window at login (turn on *Open at login*), and the ring and every shortcut keep working. Close the window and it
+stays there; the icon opens the full app, settings or the ring itself whenever you want. ⌘Q or the icon's
+*Quit Toolbox* really quits.
+
 The overlay is a second, always-hidden window of the same app, so it appears instantly. Closing the
 main window keeps Toolbox running in the menu bar so the shortcut keeps working (switch that off in
 *Radial menu ▸ Staying available*). Architecture and the native contract: [docs/RADIAL.md](docs/RADIAL.md).

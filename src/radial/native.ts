@@ -33,6 +33,9 @@ export const radialShow = (args: ShowArgs) => call<void>('radial_show', { args }
 /** The overlay has painted this session; until now the native window is kept transparent. */
 export const radialReady = (session: number) => call<void>('radial_ready', { session });
 export const radialHide = (restoreFocus = true) => call<void>('radial_hide', { restoreFocus });
+/** Release the global shortcuts while a new one is being recorded, so pressing one does not fire it. */
+export const radialSuspendShortcuts = (suspended: boolean) =>
+  isTauri() ? call<void>('radial_suspend_shortcuts', { suspended }) : Promise.resolve();
 export const radialReleaseFocus = () => call<void>('radial_release_focus');
 export const radialSetLayout = (layout: RadialLayout) => call<void>('radial_set_layout', { layout });
 export const radialStatus = () => call<RadialStatus>('radial_status');
