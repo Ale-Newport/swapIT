@@ -1,9 +1,10 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissions for the Toolbox main window.",
+  "description": "Permissions for the Toolbox main window and the radial overlay.",
   "windows": [
-    "main"
+    "main",
+    "radial"
   ],
   "permissions": [
     "core:default",

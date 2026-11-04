@@ -13,8 +13,11 @@ pub fn get_settings() -> Settings {
 }
 
 #[tauri::command]
-pub fn update_settings(patch: Value) -> AppResult<Settings> {
-    settings::patch(patch)
+pub fn update_settings(app: tauri::AppHandle, patch: Value) -> AppResult<Settings> {
+    let merged = settings::patch(patch)?;
+    // Shortcuts, drag trigger, tray and dock policy follow the settings.
+    crate::radial::reconcile(&app);
+    Ok(merged)
 }
 
 #[tauri::command]

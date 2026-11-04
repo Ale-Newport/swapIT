@@ -9,12 +9,14 @@ pub mod cmd;
 pub mod error;
 pub mod jobs;
 pub mod paths;
+pub mod radial;
 pub mod settings;
 pub mod types;
+pub mod watch;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
@@ -22,7 +24,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // The radial overlay is positioned by code, never restored from disk.
+        .plugin(tauri_plugin_window_state::Builder::default().with_denylist(&["radial"]).build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -35,16 +39,25 @@ pub fn run() {
                     let _ = window.set_title("Toolbox");
                 }
             }
-            let _ = app;
+            // Hidden radial window, global shortcuts, drag trigger, tray, dock policy.
+            radial::setup(app.handle())?;
+            // Watch folders: hand new files to the radial webview.
+            watch::start(app.handle().clone());
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::Destroyed = event {
-                if window.label() == "main" {
+        .on_window_event(|window, event| match window.label() {
+            "main" => {
+                if let tauri::WindowEvent::Destroyed = event {
                     // Stop any encoder still running when the window goes away.
                     jobs::cancel_all();
                 }
+                radial::on_main_window_event(window, event);
             }
+            radial::window::LABEL => {
+                use tauri::Manager as _;
+                radial::on_radial_window_event(window.app_handle(), event)
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             // system
@@ -119,7 +132,40 @@ pub fn run() {
             cmd::misc::take_screenshot,
             cmd::misc::remote_media_info,
             cmd::misc::download_media,
+            // quick (radial menu helpers)
+            cmd::quick::create_text_file,
+            cmd::quick::create_folder,
+            cmd::quick::trash_paths,
+            cmd::quick::duplicate_paths,
+            cmd::quick::move_paths,
+            cmd::quick::copy_paths_to_clipboard,
+            cmd::quick::reveal_many,
+            cmd::quick::open_with,
+            cmd::quick::quick_look,
+            cmd::quick::quick_look_close,
+            cmd::quick::set_desktop_picture,
+            cmd::quick::paste_clipboard_as_file,
+            cmd::quick::clipboard_summary,
+            cmd::quick::file_icon,
+            cmd::quick::file_thumbnail,
+            cmd::quick::read_text_file,
+            cmd::quick::default_folders,
+            // radial (native layer)
+            radial::commands::radial_show,
+            radial::commands::radial_hide,
+            radial::commands::radial_ready,
+            radial::commands::radial_release_focus,
+            radial::commands::radial_set_layout,
+            radial::commands::radial_last_open,
+            radial::commands::radial_status,
+            radial::commands::install_finder_action,
+            radial::commands::uninstall_finder_action,
+            radial::commands::open_in_main,
+            radial::commands::open_privacy_pane,
+            radial::commands::request_automation_permission,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Toolbox");
+        .build(tauri::generate_context!())
+        .expect("error while building Toolbox");
+
+    app.run(|handle, event| radial::on_run_event(handle, &event));
 }

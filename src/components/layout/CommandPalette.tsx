@@ -6,6 +6,7 @@ import { usePrefs, popularToolIds } from '@/core/prefs';
 import { getTool, searchTools, visibleTools } from '@/core/registry';
 import type { ToolDefinition } from '@/core/types';
 import { Icon, Kbd } from '@/components/ui';
+import { isTauri, radialShow } from '@/radial/native';
 
 interface Item {
   id: string;
@@ -56,12 +57,22 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         section: 'Categories',
         run: () => navigate(`/c/${c.id}`),
       }));
+      const ring = (intent: string) => () => void radialShow({ paths: [], trigger: 'app', intent });
+      const actions: Array<Item & { words: string }> = isTauri()
+        ? [
+            { id: 'do:text', label: 'New text file', hint: 'Create a .txt in the front Finder folder', icon: 'FileText', section: 'Create', run: ring('create:text'), words: 'new text file txt create nuevo archivo texto' },
+            { id: 'do:md', label: 'New Markdown note', hint: 'Create a .md note', icon: 'FileCode2', section: 'Create', run: ring('create:markdown'), words: 'new markdown note md create nota nuevo' },
+            { id: 'do:record', label: 'Record audio', hint: 'Voice memo saved as .m4a', icon: 'Mic', section: 'Create', run: ring('record'), words: 'record audio voice microphone memo grabar voz micrófono' },
+            { id: 'do:ring', label: 'Open the radial menu', hint: 'The ring of one-click actions', icon: 'Orbit', section: 'Create', run: ring('ring'), words: 'radial menu ring donut circle anillo menú' },
+          ].filter((a) => `${a.label} ${a.words}`.toLowerCase().includes(q))
+        : [];
       const nav: Item[] = [
+        { id: 'nav:radial', label: 'Radial menu settings', icon: 'Orbit', section: 'Go to', run: () => navigate('/radial') },
         { id: 'nav:settings', label: 'Settings', icon: 'Settings', section: 'Go to', run: () => navigate('/settings') },
         { id: 'nav:home', label: 'Home', icon: 'House', section: 'Go to', run: () => navigate('/') },
         { id: 'nav:favorites', label: 'Favorites', icon: 'Star', section: 'Go to', run: () => navigate('/favorites') },
       ].filter((n) => n.label.toLowerCase().includes(q));
-      return [...results, ...categoryMatches, ...nav];
+      return [...actions, ...results, ...categoryMatches, ...nav];
     }
 
     const favTools = favorites.map((id) => getTool(id)).filter((t): t is ToolDefinition => Boolean(t));

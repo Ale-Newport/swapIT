@@ -5,4 +5,5 @@ pub mod images;
 pub mod media;
 pub mod misc;
 pub mod pdf;
+pub mod quick;
 pub mod system;

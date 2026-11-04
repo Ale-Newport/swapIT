@@ -45,6 +45,20 @@ export interface AppSettings {
   openLastTool: boolean;
   defaultVideoCodec: string;
   defaultVideoCrf: number;
+  // Radial menu & Finder integration (see docs/RADIAL.md §1).
+  radialEnabled?: boolean;
+  radialShortcuts?: Partial<Record<'radial' | 'note' | 'record', string>>;
+  radialHoldToSelect?: boolean;
+  radialDragEnabled?: boolean;
+  radialDragModifier?: 'alt' | 'ctrl' | 'shift' | 'cmd';
+  radialCreateDir?: string | null;
+  keepRunning?: boolean;
+  menuBarIcon?: boolean;
+  showInDock?: boolean;
+  radialOpacity?: number;
+  radialAccent?: string;
+  radialTheme?: 'auto' | 'light' | 'dark';
+  watchRules?: Array<{ id: string; folder: string; action: string; enabled: boolean }>;
   [key: string]: unknown;
 }
 
