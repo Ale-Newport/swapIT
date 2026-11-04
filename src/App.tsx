@@ -13,7 +13,9 @@ import { CategoryPage, FavoritesPage } from '@/routes/CategoryPage';
 import { Home, RecentPage } from '@/routes/Home';
 import { Onboarding } from '@/routes/Onboarding';
 import { SettingsPage } from '@/routes/Settings';
+import { RadialPage } from '@/routes/RadialPage';
 import { ToolPage } from '@/routes/ToolPage';
+import { onAppNavigate } from '@/radial/native';
 
 const LAST_TOOL_KEY = 'toolbox.lastTool';
 
@@ -22,6 +24,19 @@ function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const setPanelOpen = useTaskStore((s) => s.setPanelOpen);
+
+  // The radial menu (a separate window) asks the main window to open a tool with files loaded.
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let disposed = false;
+    onAppNavigate(({ route, files }) => navigate(route, { state: files?.length ? { files } : undefined }))
+      .then((fn) => (disposed ? fn() : (stop = fn)))
+      .catch(() => undefined);
+    return () => {
+      disposed = true;
+      stop?.();
+    };
+  }, [navigate]);
 
   // Remember the last tool so the app can reopen it next launch.
   useEffect(() => {
@@ -90,6 +105,7 @@ function Shell() {
             <Route path="/" element={<Home />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/recent" element={<RecentPage />} />
+            <Route path="/radial" element={<RadialPage />} />
             <Route path="/c/:categoryId" element={<CategoryPage />} />
             <Route path="/t/*" element={<ToolPage />} />
             <Route path="/settings" element={<SettingsPage />} />

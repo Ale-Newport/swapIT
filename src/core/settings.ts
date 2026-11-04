@@ -18,6 +18,18 @@ const DEFAULTS: AppSettings = {
   openLastTool: true,
   defaultVideoCodec: 'libx264',
   defaultVideoCrf: 23,
+  radialEnabled: true,
+  radialShortcuts: { radial: 'Control+Alt+Space', note: 'Control+Alt+N', record: 'Control+Alt+R' },
+  radialHoldToSelect: true,
+  radialDragEnabled: true,
+  radialDragModifier: 'alt',
+  radialCreateDir: null,
+  keepRunning: true,
+  menuBarIcon: true,
+  showInDock: true,
+  radialOpacity: 0.7,
+  radialAccent: '#0a84ff',
+  radialTheme: 'auto',
 };
 
 interface SettingsState {

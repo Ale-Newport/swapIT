@@ -112,3 +112,19 @@ export function popularToolIds(usage: Record<string, number>, limit = 8): string
     .slice(0, limit)
     .map(([id]) => id);
 }
+
+// The radial overlay is a second webview on the same origin. When it records a
+// job or a recent tool, the main window learns about it through the storage event.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (!e.key || !e.key.startsWith('toolbox.')) return;
+    usePrefs.setState({
+      favorites: read<string[]>(FAVORITES_KEY, []),
+      recent: read<string[]>(RECENT_KEY, []),
+      usage: read<Record<string, number>>(USAGE_KEY, {}),
+      history: read<HistoryEntry[]>(HISTORY_KEY, []),
+      onboarded: read<boolean>(ONBOARDED_KEY, false),
+      lastOutputDir: read<string | null>(OUTPUT_DIR_KEY, null),
+    });
+  });
+}

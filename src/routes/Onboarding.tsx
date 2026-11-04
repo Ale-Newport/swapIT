@@ -39,6 +39,11 @@ export function Onboarding() {
               body: 'Images, video, audio and documents are processed on this Mac. Nothing is uploaded.',
             },
             {
+              icon: 'Orbit',
+              title: 'A radial menu at your cursor',
+              body: 'Select files in Finder and press ⌃⌥Space — or hold ⌥ while dragging them. Pick a petal to convert, compress, create or record.',
+            },
+            {
               icon: 'MousePointerClick',
               title: 'Drop a file, pick an action',
               body: 'Toolbox reads the file type and suggests what you can do with it.',

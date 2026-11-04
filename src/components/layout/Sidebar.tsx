@@ -67,6 +67,7 @@ export function Sidebar() {
           <NavItem to="/" icon="House" label="Home" end />
           <NavItem to="/favorites" icon="Star" label="Favorites" count={favorites.length} />
           <NavItem to="/recent" icon="History" label="Recent" />
+          <NavItem to="/radial" icon="Orbit" label="Radial menu" />
         </div>
 
         {favoriteTools.length > 0 && (

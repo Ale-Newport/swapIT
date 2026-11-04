@@ -1,4 +1,5 @@
 import { getCurrentWebview } from '@tauri-apps/api/webview';
+import { dropPoint } from './dropPoint';
 import {
   createContext,
   useCallback,
@@ -74,9 +75,7 @@ export function DndProvider({ children }: { children: ReactNode }) {
           const payload = event.payload;
           if (payload.type === 'over') {
             setDragging(true);
-            const ratio = window.devicePixelRatio || 1;
-            const x = payload.position.x / ratio;
-            const y = payload.position.y / ratio;
+            const { x, y } = dropPoint(payload.position);
             const target = findTarget(x, y);
             setHoverId(target ? target.id : 'window');
             return;
@@ -86,8 +85,8 @@ export function DndProvider({ children }: { children: ReactNode }) {
             setHoverId(null);
             const paths = (payload.paths ?? []).filter(Boolean);
             if (paths.length === 0) return;
-            const ratio = window.devicePixelRatio || 1;
-            const target = findTarget(payload.position.x / ratio, payload.position.y / ratio);
+            const at = dropPoint(payload.position);
+            const target = findTarget(at.x, at.y);
             if (target) target.onDrop(paths);
             else fallback.current?.(paths);
             return;

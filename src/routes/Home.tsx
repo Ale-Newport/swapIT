@@ -12,6 +12,9 @@ import { kindIcon } from '@/components/tool/FileDropZone';
 import { Badge, Button, Card, Icon, IconButton } from '@/components/ui';
 import { open } from '@tauri-apps/plugin-dialog';
 import clsx from 'clsx';
+import { useSettings } from '@/core/settings';
+import { formatAccelerator } from '@/radial/accelerator';
+import { isTauri, radialShow } from '@/radial/native';
 
 /** Files dropped on Home become a set of suggested actions rather than an error. */
 function QuickActions({
@@ -81,6 +84,55 @@ function QuickActions({
   );
 }
 
+/** The shortcut, the three things people reach for first, and a way to try the ring right here. */
+function RadialPromo() {
+  const shortcut = useSettings((s) => s.settings.radialShortcuts?.radial ?? 'Control+Alt+Space');
+  const native = isTauri();
+  const tiles = [
+    { icon: 'FileText', label: 'New text file', hint: '.txt', intent: 'create:text' },
+    { icon: 'FileCode2', label: 'New Markdown note', hint: '.md', intent: 'create:markdown' },
+    { icon: 'Mic', label: 'Record audio', hint: '.m4a', intent: 'record' },
+    { icon: 'Orbit', label: 'Radial menu', hint: formatAccelerator(shortcut), intent: 'ring' },
+  ];
+  return (
+    <section>
+      <div className="mb-2.5 flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+          <Icon name="Orbit" size={14} className="text-ink-faint" />
+          Radial menu
+        </h2>
+        <Link to="/radial" className="text-[11.5px] text-ink-faint transition-colors hover:text-ink">
+          Shortcuts & appearance
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        {tiles.map((t) => (
+          <button
+            key={t.intent}
+            type="button"
+            disabled={!native}
+            onClick={() => void radialShow({ paths: [], trigger: 'app', intent: t.intent })}
+            className="group flex items-center gap-3 rounded-card border border-line bg-panel p-3 text-left transition-colors hover:border-line-strong disabled:opacity-60"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-canvas text-ink-soft transition-colors group-hover:bg-ink group-hover:text-panel">
+              <Icon name={t.icon} size={16} />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[12.5px] font-medium text-ink">{t.label}</span>
+              <span className="block text-[11px] text-ink-faint">{t.hint}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 flex items-center gap-1.5 text-[11.5px] text-ink-faint">
+        <Icon name="MousePointerClick" size={12} />
+        Select files in Finder and press <b className="font-semibold text-ink-soft">{formatAccelerator(shortcut)}</b> — or hold
+        ⌥ while dragging them.
+      </p>
+    </section>
+  );
+}
+
 export function Home() {
   const [dropped, setDropped] = useState<FileInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -89,16 +141,31 @@ export function Home() {
   const usage = usePrefs((s) => s.usage);
   const counts = categoryCounts();
 
-  const ingest = useCallback(async (paths: string[]) => {
-    setLoading(true);
-    try {
-      setDropped(await inspectPaths(paths));
-    } catch {
-      setDropped([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const radialEnabled = useSettings((s) => s.settings.radialEnabled !== false);
+
+  const ingest = useCallback(
+    async (paths: string[]) => {
+      setLoading(true);
+      try {
+        // The ring appears where you let go. If it cannot (browser preview, disabled), the card below takes over.
+        if (radialEnabled && isTauri()) {
+          try {
+            await radialShow({ paths, trigger: 'app', intent: 'ring' });
+            setDropped([]);
+            return;
+          } catch {
+            /* fall through to the quick-actions card */
+          }
+        }
+        setDropped(await inspectPaths(paths));
+      } catch {
+        setDropped([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [radialEnabled],
+  );
 
   const { ref, isOver } = useDropTarget((paths) => void ingest(paths), { priority: 2 });
   useDropFallback(useCallback((paths: string[]) => void ingest(paths), [ingest]));
@@ -153,6 +220,8 @@ export function Home() {
           )}
         </div>
       </section>
+
+      {radialEnabled && <RadialPromo />}
 
       {dropped.length > 0 && <QuickActions files={dropped} onClear={() => setDropped([])} />}
 

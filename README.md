@@ -31,6 +31,9 @@ usually in under three clicks.
   loaded — only the tool you open is parsed.
 - **Batch by default.** Drag 300 HEIC files onto the converter and it converts 300
   files, with per-file progress and a cancel button that actually stops the encoder.
+- **A radial menu at your cursor.** Select files in Finder, press ⌃⌥Space, and pick what
+  to do from a ring of liquid glass — convert, compress, resize, OCR, zip, or create a
+  note and record audio — without ever opening the app. See [Radial menu](#radial-menu).
 
 ## Features
 
@@ -51,6 +54,58 @@ usually in under three clicks.
 | **Calculators** | Percentages, aspect ratios, DPI, file sizes, bitrates, video and image size estimates, storage capacity, transfer times. |
 | **Capture & OCR** | Screenshots that flow straight into the other tools, and offline OCR for images and scanned PDFs. |
 | **Clipboard** | Optional local history, formatting cleanup, save clipboard text or images to disk. |
+| **Radial menu** | A system-wide ring of one-click actions for whatever is selected in Finder (or dragged), plus *create* actions: new `.txt`/`.md`/`.json`/… files, voice memos, screenshots, paste-as-file, daily notes, QR codes — and watch folders that process files as they arrive. |
+
+## Radial menu
+
+The fastest path of all: **never open the app.**
+
+| Do this | Get this |
+| --- | --- |
+| Select files in Finder, press **⌃⌥Space** | The ring opens at your cursor with the actions that fit those files. |
+| Press **⌃⌥Space** with nothing selected | The *Create* ring: new text file, Markdown note, voice memo, screenshot, new folder, paste-as-file, daily note… saved in the folder of the front Finder window. |
+| **Drag** files from anywhere while holding **⌥** | The ring appears under the cursor; drop on a petal. |
+| Right-click ▸ **Quick Actions ▸ Open in Toolbox** | The same ring, from the context menu (install it in *Radial menu ▸ Finder*). |
+| Finder ▸ **Open With ▸ Toolbox**, or drop on the Dock icon | The same ring. |
+| **⌃⌥N** / **⌃⌥R** | Straight to *new Markdown note* / *record audio*. |
+| `open "toolbox://radial?path=/some/file"` | Automation hook for Shortcuts, Raycast or scripts. |
+
+**Using the ring.** It is deliberately small: **six petals at most**, and the first ring shows only what you most
+likely want for *those* files (a photo: JPG, PNG, WebP, Compress, Resize, More). Anything else is one tap further
+in — a petal marked `›` opens a smaller ring and the middle takes you back; there are no pages and nothing scrolls.
+Click a petal or drop files on it; hold the shortcut, flick toward a petal and let go to choose without clicking;
+`1`–`6` pick by number, the arrows walk the ring, `⎋` steps back and then closes. **Typing searches every action**,
+including the ones no ring shows. A finished action collapses into a small pill under the menu bar with *Show*,
+*Open* and *Undo*.
+
+**What it leaves to Finder.** Opening, Quick Look, moving, duplicating, compressing, renaming, new folders and the
+Trash are not on the ring: Finder's right-click menu already does them well, so the ring only offers what Finder can't.
+
+**What is on it.** Conversions between every format the universal converter knows, compress/resize/rotate images,
+compress/trim/mute video, normalise audio, merge or compress PDFs, OCR, QR scanning, colour palettes, checksums,
+JSON ⇄ YAML/CSV/XML, Markdown → HTML/Word/EPUB — and the full app's other ~150 tools, found by typing and opened
+with the files already loaded.
+
+**Create from Finder.** *Text file*, *Markdown* (with meeting-notes, daily-note, to-do, README and blog-post
+templates; the file is named after your first heading), 14 file types in all, *Record audio* (live waveform, pause,
+M4A natively, MP3/WAV when FFmpeg is present), *Paste as file*, *Daily note*, *Text from screen* (drag over any text
+and OCR copies it), *QR from clipboard*, and a few clipboard helpers (UUID, password, date).
+
+**Watch folders.** Pick a folder and an action — "convert every new HEIC in Downloads to JPG",
+"compress screenshots" — and it happens as files arrive, once they have finished writing. Results
+go into a `Toolbox Output` folder inside, so nothing is ever processed twice.
+
+**Liquid glass.** The blur behind the ring is the real macOS one (an `NSVisualEffectView` shaped like
+the ring), with a specular bevel, rim light and a lens that glides between petals drawn on top.
+Theme (follow macOS / light / dark), accent colour and glass strength are in *Radial menu ▸ Appearance*.
+
+**Permissions** (all asked once, none required for the app's own tools):
+*Automation ▸ Finder* — to read your selection and the front window's folder;
+*Microphone* — for *Record audio*. The drag gesture watches mouse events only and needs nothing.
+
+The overlay is a second, always-hidden window of the same app, so it appears instantly. Closing the
+main window keeps Toolbox running in the menu bar so the shortcut keeps working (switch that off in
+*Radial menu ▸ Staying available*). Architecture and the native contract: [docs/RADIAL.md](docs/RADIAL.md).
 
 ## Architecture
 
@@ -150,6 +205,11 @@ There is no Apple Developer ID here, so the bundle is **ad-hoc signed**
 Tauri leaves only a partial linker signature — `Info.plist` unbound, no sealed
 resources — which fails `codesign --verify` and can stop the app opening.
 
+One consequence: macOS ties its privacy permissions (Automation ▸ Finder, Microphone) to the app's
+code signature, and an ad-hoc signature is different for every build. After you rebuild and reinstall,
+macOS may ask for those permissions again — that is the system working as designed, not a bug. A
+Developer ID signature (see below) makes them stick.
+
 Ad-hoc signing is enough for an app you build and install yourself: macOS only
 insists on a notarised Developer ID signature for software that arrives carrying a
 **quarantine** flag, and that flag is set on downloads, not on a local copy.
@@ -194,6 +254,7 @@ calls a backend command needs the full app.
 | `npm test` | Vitest |
 | `npm run rust:clippy` | Clippy with warnings as errors |
 | `npm run rust:test` | Rust unit tests |
+| `npm run dev` → `/#/radial-demo` | Browser preview of the radial overlay with mocked IPC (dev builds only) |
 | `npm run check:all` | All of the above |
 | `node scripts/generate-icons.mjs` | Rebuild the curated lucide icon map |
 

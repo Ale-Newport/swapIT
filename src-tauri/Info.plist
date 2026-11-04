@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Merged into the app's Info.plist by Tauri. -->
+
+	<!-- Reading the Finder selection (the radial menu's shortcut) is an Apple Event. -->
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Toolbox asks Finder which files are selected so the radial menu can act on them when you press its shortcut.</string>
+
+	<!-- Record Audio. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Toolbox uses the microphone only when you choose Record Audio, to save a recording next to your files.</string>
+
+	<!-- Files in the places people keep them: shown once when a tool first writes there. -->
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Toolbox converts and creates files on your Desktop when you ask it to.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Toolbox converts and creates files in your Documents folder when you ask it to.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Toolbox converts and creates files in your Downloads folder when you ask it to.</string>
+
+	<!-- toolbox://radial?path=…  (automation, Shortcuts, the Finder Quick Action) -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.toolbox.desktop</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>toolbox</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Finder ▸ Open With ▸ Toolbox, and dropping files on the Dock icon, for any file. -->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Any file or folder</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.item</string>
+				<string>public.folder</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
