@@ -2,6 +2,7 @@ import { toolsForFiles, visibleTools } from '@/core/registry';
 import type { ClipboardSummary } from '@/core/quick';
 import type { FileInfo } from '@/core/types';
 import type { RadialItem } from '../model';
+import { applyLayout, layoutKeyFor, leaves, sanitizeLayouts } from '../layouts';
 import { flattenItems } from '../menu';
 import { clipboardItems, createItems, newFileItems } from './create';
 import { convertItems } from './convert';
@@ -26,11 +27,17 @@ import { compact, menu, preferAvailable, shortLabel, ui, type CatalogInput } fro
 export interface BuildArgs extends CatalogInput {
   intent: string;
   clipboard: ClipboardSummary | null;
+  /** The user's own rings (`radialLayouts` in the settings), as stored. */
+  layouts?: unknown;
 }
 
 export interface MenuModel {
-  /** The first ring. */
+  /** The first ring: the user's own if they made one for this kind of file, else the standard one. */
   root: RadialItem[];
+  /** The standard first ring, whatever the user has changed. */
+  standard: RadialItem[];
+  /** Every action this kind of file can offer, for the editor that arranges them. */
+  candidates: RadialItem[];
   /** Everything typing can reach: the rings plus actions no ring shows. */
   pool: RadialItem[];
 }
@@ -320,9 +327,18 @@ export function buildMenu(args: BuildArgs): MenuModel {
   const clip = clipboardItems();
   const tools = toolboxEntries(files);
 
+  const layout = sanitizeLayouts(args.layouts)[layoutKeyFor(files)];
+
   if (files.length === 0) {
-    const root = createRoot(input, clipboard);
-    return { root, pool: dedupe([...flattenItems(root), ...create, ...types, ...clip, ...tools]) };
+    const standard = createRoot(input, clipboard);
+    const candidates = leaves([...standard, ...create, ...types, ...clip]);
+    return {
+      root: applyLayout(standard, candidates, layout),
+      standard,
+      candidates,
+      // Switching an action off takes it off the ring, not out of reach: typing still finds it.
+      pool: dedupe([...flattenItems(standard), ...create, ...types, ...clip, ...tools]),
+    };
   }
 
   const convert = convertItems(input);
@@ -330,11 +346,13 @@ export function buildMenu(args: BuildArgs): MenuModel {
   const edit = editItems(input);
   const toolSet = toolItems(input);
   const all = byId([...convert, ...text, ...edit, ...toolSet]);
-  const root = filesRoot(input, { all, convert, text, tools: toolSet });
+  const standard = filesRoot(input, { all, convert, text, tools: toolSet });
+  const candidates = leaves([...standard, ...convert, ...text, ...edit, ...toolSet]);
+  const root = applyLayout(standard, candidates, layout);
 
   // Everything the rings do not show is still one search away.
   const pool = dedupe([
-    ...flattenItems(root),
+    ...flattenItems(standard),
     ...convert,
     ...text,
     ...edit,
@@ -345,7 +363,7 @@ export function buildMenu(args: BuildArgs): MenuModel {
     ...clip,
     ...tools,
   ]);
-  return { root, pool };
+  return { root, standard, candidates, pool };
 }
 
 function dedupe(items: RadialItem[]): RadialItem[] {

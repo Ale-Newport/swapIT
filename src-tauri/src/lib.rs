@@ -25,11 +25,18 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        // The radial overlay is positioned by code, never restored from disk.
-        .plugin(tauri_plugin_window_state::Builder::default().with_denylist(&["radial"]).build())
+        // The radial overlay is positioned by code, never restored from disk. Whether the main
+        // window is shown at launch is decided in `radial::launch_main_window`, not by the
+        // visibility it had when the app last quit.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_denylist(&["radial"])
+                .with_state_flags(tauri_plugin_window_state::StateFlags::all() - tauri_plugin_window_state::StateFlags::VISIBLE)
+                .build(),
+        )
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec![radial::BACKGROUND_FLAG]),
         ))
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -41,6 +48,9 @@ pub fn run() {
             }
             // Hidden radial window, global shortcuts, drag trigger, tray, dock policy.
             radial::setup(app.handle())?;
+            // The window starts hidden; show it unless this is a quiet login launch.
+            radial::launch_main_window(app.handle(), std::env::args().any(|a| a == radial::BACKGROUND_FLAG));
+            radial::refresh_launch_agent(app.handle());
             // Watch folders: hand new files to the radial webview.
             watch::start(app.handle().clone());
             Ok(())
@@ -154,6 +164,7 @@ pub fn run() {
             radial::commands::radial_show,
             radial::commands::radial_hide,
             radial::commands::radial_ready,
+            radial::commands::radial_suspend_shortcuts,
             radial::commands::radial_release_focus,
             radial::commands::radial_set_layout,
             radial::commands::radial_last_open,

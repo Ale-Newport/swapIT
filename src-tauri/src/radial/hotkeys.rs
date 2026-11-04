@@ -51,11 +51,12 @@ pub fn apply(app: &AppHandle, cfg: &RadialConfig) -> std::collections::BTreeMap<
     let gs = app.global_shortcut();
     let _ = gs.unregister_all();
     let mut statuses = std::collections::BTreeMap::new();
+    let suspended = super::STATE.lock().map(|st| st.shortcuts_suspended).unwrap_or(false);
 
     for kind in SHORTCUT_KINDS {
         let accelerator = cfg.shortcut(kind).to_string();
         let mut status = ShortcutStatus { accelerator: accelerator.clone(), registered: false, error: None };
-        if accelerator.is_empty() || !cfg.enabled {
+        if accelerator.is_empty() || !cfg.enabled || suspended {
             statuses.insert(kind.to_string(), status);
             continue;
         }

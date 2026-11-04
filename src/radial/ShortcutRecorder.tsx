@@ -1,28 +1,43 @@
 import clsx from 'clsx';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/ui';
 import { acceleratorParts, captureAccelerator } from './accelerator';
+import { radialSuspendShortcuts } from './native';
 
 /**
  * Click, then press the combination you want. Escape backs out; the shortcut is
  * only changed once a complete, valid combination has been pressed.
+ *
+ * While it listens, the app's own global shortcuts are released — otherwise pressing the
+ * current combination would open the ring instead of being recorded.
  */
 export function ShortcutRecorder({
   value,
   onChange,
   error,
   registered,
+  defaultValue,
+  validate,
 }: {
   value: string;
   onChange: (accelerator: string) => void;
   error?: string | null;
   registered?: boolean;
+  /** The factory shortcut: when it differs from `value`, a reset button appears. */
+  defaultValue?: string;
+  /** A reason this combination cannot be used (already taken…), or null. */
+  validate?: (accelerator: string) => string | null;
 }) {
   const [recording, setRecording] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const latest = useRef({ onChange, validate });
+  useEffect(() => {
+    latest.current = { onChange, validate };
+  });
 
   useEffect(() => {
     if (!recording) return;
+    void radialSuspendShortcuts(true).catch(() => undefined);
     const onKey = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -37,13 +52,21 @@ export function ShortcutRecorder({
         setProblem(captured.reason);
         return;
       }
+      const taken = latest.current.validate?.(captured.accelerator) ?? null;
+      if (taken) {
+        setProblem(taken);
+        return;
+      }
       setProblem(null);
       setRecording(false);
-      onChange(captured.accelerator);
+      latest.current.onChange(captured.accelerator);
     };
     window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [recording, onChange]);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      void radialSuspendShortcuts(false).catch(() => undefined);
+    };
+  }, [recording]);
 
   const parts = acceleratorParts(value);
 
@@ -84,6 +107,17 @@ export function ShortcutRecorder({
             <span className="text-ink-faint">Off</span>
           )}
         </button>
+        {!recording && defaultValue !== undefined && value !== defaultValue && (
+          <button
+            type="button"
+            aria-label="Back to the original shortcut"
+            title="Back to the original"
+            onClick={() => onChange(defaultValue)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint transition-colors hover:bg-ink/6 hover:text-ink"
+          >
+            <Icon name="RotateCcw" size={14} />
+          </button>
+        )}
         {!recording && value && (
           <button
             type="button"

@@ -27,6 +27,8 @@ const DEFAULTS: AppSettings = {
   keepRunning: true,
   menuBarIcon: true,
   showInDock: true,
+  menuBarMode: false,
+  radialLayouts: {},
   radialOpacity: 0.7,
   radialAccent: '#0a84ff',
   radialTheme: 'auto',

@@ -1,30 +1,23 @@
-import { disable as disableAutostart, enable as enableAutostart, isEnabled as autostartEnabled } from '@tauri-apps/plugin-autostart';
 import { open } from '@tauri-apps/plugin-dialog';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { defaultFolders } from '@/core/quick';
 import { useSettings } from '@/core/settings';
 import { Alert, Badge, Button, Field, Icon, IconButton, Section, Segmented, Select, Slider, Switch } from '@/components/ui';
-import { DEFAULT_SHORTCUTS, formatAccelerator, type ShortcutId } from '@/radial/accelerator';
+import { formatAccelerator } from '@/radial/accelerator';
 import { ACCENT_CHOICES, DEFAULT_ACCENT, DEFAULT_OPACITY } from '@/radial/appearance';
+import { LayoutEditor } from '@/radial/LayoutEditor';
 import {
   installFinderAction,
   isTauri,
   openPrivacyPane,
   radialShow,
-  radialStatus,
   requestAutomationPermission,
   uninstallFinderAction,
 } from '@/radial/native';
-import type { RadialStatus } from '@/radial/model';
 import { RingPreview } from '@/radial/RingPreview';
-import { ShortcutRecorder } from '@/radial/ShortcutRecorder';
+import { ShortcutFields, WhereItLives, useRadialStatus } from '@/radial/SettingsBlocks';
 import { WATCH_ACTIONS, WATCH_OUTPUT } from '@/radial/watch';
-
-const SHORTCUTS: Array<{ id: ShortcutId; label: string; hint: string }> = [
-  { id: 'radial', label: 'Open the radial menu', hint: 'Select files in Finder first — or nothing, to create something' },
-  { id: 'note', label: 'New Markdown note', hint: 'Straight to the note card, in the front Finder folder' },
-  { id: 'record', label: 'Record audio', hint: 'Straight to the voice recorder' },
-];
 
 const MODIFIERS = [
   { value: 'alt', label: '⌥ Option' },
@@ -52,37 +45,25 @@ function Key({ children }: { children: ReactNode }) {
 
 export function RadialPage() {
   const { settings, update } = useSettings();
-  const [status, setStatus] = useState<RadialStatus | null>(null);
+  const { status, refresh } = useRadialStatus();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [launchAtLogin, setLaunchAtLogin] = useState(false);
   const [desktop, setDesktop] = useState('');
-  const refreshTimer = useRef<number | undefined>(undefined);
-
-  const refresh = useCallback(() => {
-    window.clearTimeout(refreshTimer.current);
-    // The backend reconciles shortcuts a moment after a settings patch lands.
-    refreshTimer.current = window.setTimeout(() => {
-      void radialStatus()
-        .then(setStatus)
-        .catch(() => setStatus(null));
-    }, 250);
-  }, []);
+  const { hash } = useLocation();
 
   useEffect(() => {
-    refresh();
-    void autostartEnabled().then(setLaunchAtLogin).catch(() => undefined);
     void defaultFolders().then((f) => setDesktop(f.desktop)).catch(() => undefined);
-    return () => window.clearTimeout(refreshTimer.current);
-  }, [refresh]);
+  }, []);
+
+  // “Customize Rings…” in the menu bar lands here, on the rings.
+  useEffect(() => {
+    if (hash === '#rings') document.getElementById('rings')?.scrollIntoView({ block: 'start' });
+  }, [hash]);
 
   const patch = async (value: Record<string, unknown>) => {
     await update(value);
     refresh();
   };
-
-  const shortcuts = { ...DEFAULT_SHORTCUTS, ...(settings.radialShortcuts ?? {}) } as Record<ShortcutId, string>;
-  const setShortcut = (id: ShortcutId, accelerator: string) => void patch({ radialShortcuts: { ...shortcuts, [id]: accelerator } });
 
   const enabled = settings.radialEnabled !== false;
   const accent = settings.radialAccent ?? DEFAULT_ACCENT;
@@ -101,15 +82,6 @@ export function RadialPage() {
     } finally {
       setBusy(null);
       refresh();
-    }
-  };
-
-  const toggleLaunch = async (next: boolean) => {
-    setLaunchAtLogin(next);
-    try {
-      await (next ? enableAutostart() : disableAutostart());
-    } catch {
-      setLaunchAtLogin(await autostartEnabled().catch(() => false));
     }
   };
 
@@ -175,26 +147,23 @@ export function RadialPage() {
         </Alert>
       )}
 
-      <Section title="Shortcuts" description="Work from any app, including full-screen ones. Each needs ⌃, ⌥ or ⌘.">
+      <Section title="Shortcuts" description="Work from any app, including full-screen ones. Click one, then press the keys you want. Each needs ⌃, ⌥ or ⌘.">
         <div className="divide-y divide-line">
-          {SHORTCUTS.map((s) => {
-            const state = status?.shortcuts?.[s.id];
-            return (
-              <Field key={s.id} inline label={s.label} hint={s.hint}>
-                <ShortcutRecorder
-                  value={shortcuts[s.id]}
-                  onChange={(acc) => setShortcut(s.id, acc)}
-                  error={state?.error}
-                  registered={state?.registered}
-                />
-              </Field>
-            );
-          })}
+          <ShortcutFields status={status} onChanged={refresh} />
           <Field inline label="Hold and release to choose" hint="Keep the shortcut down, flick toward a petal, let go. A quick tap keeps the menu open.">
             <Switch checked={settings.radialHoldToSelect !== false} onCheckedChange={(v) => void patch({ radialHoldToSelect: v })} />
           </Field>
         </div>
       </Section>
+
+      <div id="rings" className="scroll-mt-4">
+        <Section
+          title="Your rings"
+          description="For each kind of file, choose what the ring offers and in what order. Six petals at most — the rest waits inside More."
+        >
+          <LayoutEditor theme={previewTheme} accent={accent} opacity={opacity} />
+        </Section>
+      </div>
 
       <Section title="Drag gesture" description="Grab files anywhere — Finder, Mail, a browser — hold the key, and the ring appears under the cursor.">
         <div className="divide-y divide-line">
@@ -363,21 +332,8 @@ export function RadialPage() {
         </div>
       </Section>
 
-      <Section title="Staying available">
-        <div className="divide-y divide-line">
-          <Field inline label="Keep running when the window is closed" hint="Shortcuts only work while Toolbox is running — it waits in the menu bar.">
-            <Switch checked={settings.keepRunning !== false} onCheckedChange={(v) => void patch({ keepRunning: v })} />
-          </Field>
-          <Field inline label="Menu bar icon" hint="Quick access to the ring, new notes and recording">
-            <Switch checked={settings.menuBarIcon !== false} onCheckedChange={(v) => void patch({ menuBarIcon: v })} />
-          </Field>
-          <Field inline label="Show in the Dock">
-            <Switch checked={settings.showInDock !== false} onCheckedChange={(v) => void patch({ showInDock: v })} />
-          </Field>
-          <Field inline label="Open at login" hint="So the shortcut is always there">
-            <Switch checked={launchAtLogin} onCheckedChange={(v) => void toggleLaunch(v)} />
-          </Field>
-        </div>
+      <Section title="Staying available" description="Shortcuts and the ring only work while Toolbox is running. In the menu bar it needs no window.">
+        <WhereItLives detailed />
       </Section>
 
       <Section title="Using it" description="Six petals at most. Anything else is one tap further in — never a page to scroll.">

@@ -1,10 +1,12 @@
 import { disable as disableAutostart, enable as enableAutostart, isEnabled as autostartEnabled } from '@tauri-apps/plugin-autostart';
 import { open } from '@tauri-apps/plugin-dialog';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { appPaths, checkBinaries, installInstructions, type AppPaths } from '@/core/bridge';
 import { usePrefs } from '@/core/prefs';
 import { useSettings } from '@/core/settings';
 import type { BinaryStatus } from '@/core/types';
+import { ShortcutFields, WhereItLives, useRadialStatus } from '@/radial/SettingsBlocks';
 import {
   Alert,
   Badge,
@@ -118,6 +120,8 @@ export function SettingsPage() {
   const [loadingBinaries, setLoadingBinaries] = useState(true);
   const [paths, setPaths] = useState<AppPaths | null>(null);
   const [launchAtLogin, setLaunchAtLogin] = useState(false);
+  const radialStatus = useRadialStatus();
+  const navigate = useNavigate();
 
   const refreshBinaries = async () => {
     setLoadingBinaries(true);
@@ -182,6 +186,29 @@ export function SettingsPage() {
             <Switch checked={settings.notifications} onCheckedChange={(v) => void update({ notifications: v })} />
           </Field>
 
+        </div>
+      </Section>
+
+      <Section
+        title="Radial menu & menu bar"
+        description="A ring of actions that opens over Finder at the press of a key — and keeps working with Toolbox's window closed."
+        actions={
+          <Button size="sm" variant="ghost" iconRight="ArrowRight" onClick={() => navigate('/radial')}>
+            All radial options
+          </Button>
+        }
+      >
+        <div className="divide-y divide-line">
+          <ShortcutFields status={radialStatus.status} onChanged={radialStatus.refresh} />
+        </div>
+        <div className="mt-1 border-t border-line">
+          <WhereItLives withLogin={false} />
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-3 border-t border-line pt-3">
+          <p className="text-[11.5px] text-ink-faint">Choose what the ring offers for images, video, PDFs and more — and in what order.</p>
+          <Button size="sm" icon="SlidersHorizontal" onClick={() => navigate('/radial#rings')}>
+            Customize the rings
+          </Button>
         </div>
       </Section>
 
