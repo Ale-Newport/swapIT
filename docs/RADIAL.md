@@ -305,9 +305,30 @@ cards, pill and search can be iterated on without building the app.
   targets use it.
 * **Plugins.** `tauri-plugin-global-shortcut` is pinned to `~2.3.2`: newer releases require Tauri 2.12
   and break the `@tauri-apps/api` 2.11 match.
-* **Not verified on hardware:** the ring over a full-screen app and on a second display (the window
-  level and collection-behaviour flags are set), and release-build latency of the first show (the
-  ring's mask is pre-rendered at start-up and cached).
+* **Over full-screen apps: the window is a non-activating `NSPanel`.** The level and
+  `canJoinAllSpaces | fullScreenAuxiliary` from §2 are not enough: a plain tao window never reached
+  another app's full-screen Space (`isOnActiveSpace` stayed false), and activating Toolbox does not help
+  — it only makes macOS look for the app's own Space. AppKit silently drops `NonactivatingPanel` from a
+  plain `NSWindow`, so `window::into_panel` re-classes tao's window to an `NSPanel` subclass at start-up.
+  It is a bare `isa` swap and is only done after checking that the instance size and the offset of tao's
+  `focusable` ivar match; if they ever do not, the window stays plain and the old activating path runs
+  (works over normal windows, not over full-screen apps). What changes:
+  * `present` no longer activates the app — the panel becomes key by itself, so typing, `1`–`6` and the
+    arrows work, and the app underneath stays in front (so does its Space). Hiding with focus restore
+    just re-activates an app that is already frontmost.
+  * `radial_release_focus` (ring → pill) also calls `resignKeyWindow`: re-activating the previous app
+    does nothing when it is already in front, and the pill would keep the keyboard.
+  * Clicking another window of the app that is in front does not deactivate Toolbox, so
+    `hide_on_outside_click` (a global mouse-down monitor, no permission needed) hides the ring with the
+    same condition as the blur-hide.
+* **Verified on hardware (debug build, menu bar mode and Dock mode):** the ring over full-screen Claude
+  and Safari Spaces — it appears, no Space switch, the app underneath stays frontmost; typing reaches the
+  page; hover works; the shortcut toggles it off; the page blurs and the window stops being key after
+  `radial_release_focus`. Over a normal desktop Space it showed and took the keyboard in an earlier build of
+  the same change; the final build was not re-run there.
+  **Not verified:** a click in the front app's window closing the ring (the monitor is in, but no
+  synthetic clicks were sent), a second display, and release-build latency of the first show (the ring's
+  mask is pre-rendered at start-up and cached).
 
 ## 11. Design rules (v2)
 
