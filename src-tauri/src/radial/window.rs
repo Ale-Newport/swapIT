@@ -4,15 +4,19 @@
 use super::config::{Appearance, RadialConfig};
 use super::geometry::{self, Anchor, Rect, Shape};
 use super::{OpenPayload, Point, ShowRequest, State, STATE};
+use block2::RcBlock;
 use objc2::rc::Retained;
-use objc2::MainThreadMarker;
+use objc2::runtime::{AnyClass, AnyObject, Bool, ClassBuilder, Sel};
+use objc2::{sel, MainThreadMarker};
 use objc2_app_kit::{
-    NSApplication, NSApplicationActivationOptions, NSEvent, NSRunningApplication, NSScreen, NSWindow,
-    NSWindowCollectionBehavior,
+    NSApplication, NSApplicationActivationOptions, NSEvent, NSEventMask, NSRunningApplication, NSScreen,
+    NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize, NSString};
 use serde::Deserialize;
+use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::OnceLock;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub const LABEL: &str = "radial";
@@ -87,6 +91,10 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
 
     let ptr = window.ns_window()? as *mut NSWindow;
     if let Some(ns) = unsafe { Retained::retain(ptr) } {
+        PANEL.store(into_panel(&ns), Ordering::SeqCst);
+        if is_panel() {
+            hide_on_outside_click(app);
+        }
         configure(&ns);
         super::glass::install(&ns, mtm());
         // Render the default ring mask now so the first show is instant.
@@ -95,6 +103,75 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
         super::glass::apply(&ring.shape, ring.width, ring.height, appearance, 2.0);
     }
     Ok(())
+}
+
+// ------------------------------------------------------------------ non-activating panel
+
+/// Set when the window was turned into a non-activating panel (see [`into_panel`]).
+static PANEL: AtomicBool = AtomicBool::new(false);
+
+fn is_panel() -> bool {
+    PANEL.load(Ordering::SeqCst)
+}
+
+/// `canBecomeKeyWindow`: like tao's own window class, answer from the `focusable` ivar.
+extern "C-unwind" fn focusable(this: &AnyObject, _: Sel) -> Bool {
+    match this.class().instance_variable(c"focusable") {
+        Some(ivar) => unsafe { *ivar.load::<Bool>(this) },
+        None => Bool::YES,
+    }
+}
+
+/// `NSPanel` plus the one instance variable tao's window class adds, so a tao window can
+/// become one in place.
+fn panel_class() -> Option<&'static AnyClass> {
+    static CLASS: OnceLock<Option<&'static AnyClass>> = OnceLock::new();
+    *CLASS.get_or_init(|| {
+        let mut builder = ClassBuilder::new(c"ToolboxRadialPanel", AnyClass::get(c"NSPanel")?)?;
+        builder.add_ivar::<Bool>(c"focusable");
+        unsafe { builder.add_method(sel!(canBecomeKeyWindow), focusable as extern "C-unwind" fn(_, _) -> _) };
+        Some(builder.register())
+    })
+}
+
+/// Turn the tao window into a non-activating `NSPanel`; `false` (window left alone) if the
+/// layouts do not line up.
+///
+/// A plain window never reached another app's full-screen Space, whatever its level and
+/// collection behaviour (`isOnActiveSpace` stayed false), and activating the app only sends
+/// macOS looking for the app's own Space. A panel that does not activate its app can sit
+/// there and still be key, so typing works. AppKit silently drops `NonactivatingPanel` from a
+/// plain `NSWindow`, and tao creates plain windows, so the class is swapped. The swap is a
+/// bare `isa` change, safe only because the panel class has the same instance size and the
+/// same `focusable` ivar offset as tao's; both are checked.
+fn into_panel(win: &NSWindow) -> bool {
+    let Some(panel) = panel_class() else { return false };
+    let current = win.class();
+    let offset = |class: &AnyClass| class.instance_variable(c"focusable").map(|ivar| ivar.offset());
+    let compatible = offset(current).is_some()
+        && offset(current) == offset(panel)
+        && current.instance_size() == panel.instance_size();
+    if compatible {
+        unsafe { objc2::ffi::object_setClass(win as *const NSWindow as *mut AnyObject, panel) };
+    }
+    compatible
+}
+
+/// A panel that does not activate its app is not deactivated when the user clicks another
+/// window of the app in front, so the usual "lost focus, hide" may never come. Watch mouse-downs
+/// in other apps instead (needs no permission; our own windows never trigger it).
+fn hide_on_outside_click(app: &AppHandle) {
+    let handle = app.clone();
+    let on_click = RcBlock::new(move |_event: NonNull<NSEvent>| {
+        // Same condition as the blur-hide in `on_radial_window_event`.
+        let outside = STATE.lock().map(|st| st.visible && !st.sticky && st.focused_once).unwrap_or(false);
+        if outside {
+            hide(&handle, false);
+        }
+    });
+    let mask = NSEventMask::LeftMouseDown | NSEventMask::RightMouseDown | NSEventMask::OtherMouseDown;
+    // The monitor lives as long as the app.
+    std::mem::forget(NSEvent::addGlobalMonitorForEventsMatchingMask_handler(mask, &on_click));
 }
 
 fn configure(win: &NSWindow) {
@@ -109,6 +186,10 @@ fn configure(win: &NSWindow) {
     win.setHasShadow(false);
     win.setOpaque(false);
     win.setMovable(false);
+    if is_panel() {
+        // Key without activating the app: typing works, the app underneath keeps its place.
+        win.setStyleMask(win.styleMask() | NSWindowStyleMask::NonactivatingPanel);
+    }
 }
 
 pub fn ns_window(app: &AppHandle) -> Option<Retained<NSWindow>> {
@@ -240,9 +321,13 @@ pub fn present(app: &AppHandle, req: ShowRequest) {
     let _ = app.emit_to(LABEL, "radial://open", &payload);
 
     if req.activate {
-        let ns_app = NSApplication::sharedApplication(mtm);
-        #[allow(deprecated)]
-        ns_app.activateIgnoringOtherApps(true);
+        // A panel takes the keyboard without the app being activated; activating as well would
+        // make macOS look for the app's own Space when a full-screen app is in front.
+        if !is_panel() {
+            let ns_app = NSApplication::sharedApplication(mtm);
+            #[allow(deprecated)]
+            ns_app.activateIgnoringOtherApps(true);
+        }
         win.makeKeyAndOrderFront(None);
     } else {
         // Drag mode: do not steal the focus from the app the user is dragging out of.
@@ -326,8 +411,17 @@ pub fn release_focus(app: &AppHandle) {
         st.sticky = true;
         st.prev_pid
     };
-    let _ = app;
     activate_pid(prev);
+    if is_panel() {
+        // The previous app is already in front, so activating it changed nothing: the panel
+        // is still key and would swallow the keystrokes meant for that app.
+        let handle = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            if let Some(win) = ns_window(&handle) {
+                win.resignKeyWindow();
+            }
+        });
+    }
 }
 
 pub fn set_layout(app: &AppHandle, layout: LayoutArgs) {
