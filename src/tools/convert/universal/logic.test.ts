@@ -58,6 +58,25 @@ describe('the conversion table', () => {
 });
 
 describe('availableTargets', () => {
+  it('only offers spreadsheets and slides the formats LibreOffice can write for them', () => {
+    const offered = (ext: string) =>
+      availableTargets('document', [ext], all)
+        .filter((e) => e.available)
+        .map((e) => e.target.ext);
+    expect(offered('docx')).toEqual(expect.arrayContaining(['pdf', 'docx', 'odt', 'rtf', 'html', 'txt']));
+    expect(offered('xlsx')).toEqual(['pdf', 'html']);
+    expect(offered('pptx')).toEqual(['pdf']);
+    const blocked = availableTargets('document', ['xlsx'], all).find((e) => e.target.ext === 'docx');
+    expect(blocked).toMatchObject({ available: false, blocked: expect.stringContaining('spreadsheet') });
+  });
+
+  it('leaves e-books to Pandoc, because LibreOffice cannot open them', () => {
+    const offered = availableTargets('document', ['epub'], all)
+      .filter((e) => e.available)
+      .map((e) => e.target.ext);
+    expect(offered).toEqual(['md']);
+  });
+
   it('greys out a target whose program is missing and names the binary', () => {
     const entries = availableTargets('image', ['png'], (id: BinaryId) => id !== 'magick');
     const avif = entries.find((e) => e.target.ext === 'avif');

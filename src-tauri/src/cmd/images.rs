@@ -226,11 +226,8 @@ async fn decode_external(path: &Path, ext: &str) -> AppResult<DynamicImage> {
     // 2. ImageMagick handles the long tail (SVG, PSD, exotic TIFFs, …).
     if let Some(magick) = binaries::resolve("magick") {
         std::fs::create_dir_all(&tmp_dir).ok();
-        let is_convert_alias = magick.file_name().map(|n| n == "convert").unwrap_or(false);
+        // ImageMagick 7 takes the arguments directly; its `magick convert` spelling is deprecated.
         let mut args: Vec<String> = Vec::new();
-        if !is_convert_alias {
-            args.push("convert".to_string());
-        }
         if ext == "svg" {
             args.push("-background".into());
             args.push("none".into());
@@ -664,15 +661,12 @@ async fn encode_external(img: &DynamicImage, ext: &str, quality: u8) -> AppResul
     let src = dir.join("in.png");
     let dst = dir.join(format!("out.{ext}"));
     img.save(&src)?;
-    let is_convert_alias = magick.file_name().map(|n| n == "convert").unwrap_or(false);
-    let mut args: Vec<String> = Vec::new();
-    if !is_convert_alias {
-        args.push("convert".into());
-    }
-    args.push(src.to_string_lossy().to_string());
-    args.push("-quality".into());
-    args.push(quality.clamp(1, 100).to_string());
-    args.push(dst.to_string_lossy().to_string());
+    let args: Vec<String> = vec![
+        src.to_string_lossy().to_string(),
+        "-quality".into(),
+        quality.clamp(1, 100).to_string(),
+        dst.to_string_lossy().to_string(),
+    ];
     let out = jobs::run(None, &magick, &args).await?;
     if !out.ok() || !dst.exists() {
         std::fs::remove_dir_all(&dir).ok();

@@ -213,3 +213,40 @@ fn skip_policy_still_writes_when_nothing_is_in_the_way() {
     assert_eq!(dest.disposition, Disposition::Created);
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// Lossy WebP, AVIF and HEIC are written by ImageMagick; the Rust encoders cannot do them.
+/// This is what "convert to WebP/AVIF/HEIC" runs, with whatever ImageMagick is installed.
+#[tokio::test]
+async fn webp_avif_and_heic_are_written_through_imagemagick() {
+    if toolbox_lib::binaries::resolve("magick").is_none() {
+        return;
+    }
+    let img = images::decode(&fixture("sample.png")).await.unwrap();
+    for (ext, check) in [
+        ("webp", Box::new(|b: &[u8]| &b[0..4] == b"RIFF" && &b[8..12] == b"WEBP") as Box<dyn Fn(&[u8]) -> bool>),
+        ("avif", Box::new(|b: &[u8]| &b[4..8] == b"ftyp")),
+        ("heic", Box::new(|b: &[u8]| &b[4..8] == b"ftyp")),
+    ] {
+        let bytes = images::encode(&img, ext, 80).await.unwrap_or_else(|e| panic!("{ext}: {e:?}"));
+        assert!(bytes.len() > 100 && check(&bytes), "{ext} output is not a real {ext} file");
+    }
+}
+
+/// SVG has no native decoder; ImageMagick rasterises it (sharply, at a high density).
+#[tokio::test]
+async fn an_svg_is_rasterised_through_imagemagick() {
+    if toolbox_lib::binaries::resolve("magick").is_none() {
+        return;
+    }
+    let dir = temp_dir("svg");
+    let svg = dir.join("shape.svg");
+    std::fs::write(
+        &svg,
+        r##"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="60"><rect width="100" height="60" fill="#e33"/></svg>"##,
+    )
+    .unwrap();
+    let img = images::decode(&svg).await.expect("SVG must rasterise");
+    let (w, h) = image::GenericImageView::dimensions(&img);
+    assert!(w >= 100 && h >= 60 && (w as f64 / h as f64 - 100.0 / 60.0).abs() < 0.02, "got {w}x{h}");
+    std::fs::remove_dir_all(&dir).ok();
+}

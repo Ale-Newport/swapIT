@@ -181,6 +181,28 @@ const TABLE: Record<string, ConversionTarget[]> = {
 /** Sources Pandoc can actually read, so document → Markdown is never offered blindly. */
 const PANDOC_SOURCES = new Set(['docx', 'odt', 'epub', 'html', 'htm']);
 
+/**
+ * What LibreOffice can write for the documents it reads. A text document reaches every format
+ * in the table; a spreadsheet or a slide deck has no Word, ODT, RTF or text export, and an e-book
+ * cannot be opened at all, so offering those would only end in an error.
+ */
+const SPREADSHEETS = new Set(['xls', 'xlsx', 'ods']);
+const SLIDES = new Set(['ppt', 'pptx', 'odp']);
+const SPREADSHEET_TARGETS = new Set(['pdf', 'html']);
+const SLIDE_TARGETS = new Set(['pdf']);
+
+function officeBlock(ext: string, target: string): string | null {
+  // LibreOffice has no EPUB import ("source file could not be loaded"); Pandoc reads them.
+  if (ext === 'epub') return 'LibreOffice cannot open e-books — Markdown (through Pandoc) works.';
+  if (SPREADSHEETS.has(ext) && !SPREADSHEET_TARGETS.has(target)) {
+    return `LibreOffice turns a spreadsheet into PDF or HTML, not .${target}.`;
+  }
+  if (SLIDES.has(ext) && !SLIDE_TARGETS.has(target)) {
+    return `LibreOffice turns slides into PDF, not .${target}.`;
+  }
+  return null;
+}
+
 export function targetsForKind(kind: FileKind): ConversionTarget[] {
   return TABLE[kind] ?? [];
 }
@@ -226,6 +248,10 @@ export function availableTargets(
           blocked: `Pandoc cannot read .${unreadable[0]} files — convert to DOCX or HTML first.`,
         };
       }
+    }
+    if (target.command === 'convert_document' && kind === 'document') {
+      const blocked = sources.map((ext) => officeBlock(ext, target.ext)).find((reason) => reason !== null);
+      if (blocked) return { target, available: false, missing: [], blocked };
     }
     return { target, available: missing.length === 0, missing };
   });

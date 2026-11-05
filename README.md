@@ -179,7 +179,12 @@ engine plus macOS's built-in `sips` for HEIC. The rest are installed with Homebr
 ```bash
 brew install ffmpeg imagemagick ghostscript poppler qpdf exiftool tesseract tesseract-lang pandoc yt-dlp
 brew install --cask libreoffice   # only for Word ↔ PDF
+brew install deno                 # lets yt-dlp read YouTube links
 ```
+
+Programs started from the app (yt-dlp calling FFmpeg, ImageMagick calling Ghostscript) are
+given Homebrew's folders on their `PATH`, so they are found even when Toolbox was opened from
+the Dock or Launchpad rather than a terminal.
 
 Toolbox never installs anything itself. Settings › Advanced shows what is present,
 what is missing, each version, and the exact command to install it — or you can point
@@ -282,7 +287,7 @@ calls a backend command needs the full app.
 | Tesseract | Offline OCR | For OCR |
 | ExifTool | Deep metadata beyond EXIF | Optional |
 | Pandoc | Markup and document conversion | Optional |
-| LibreOffice | Word ↔ PDF | For those two tools |
+| LibreOffice | Word ↔ PDF, PDF → Word/ODT/RTF, Office documents | For those tools |
 | yt-dlp | Media Downloader | For that one tool |
 
 A tool that needs a missing program says so on its own page, with the install

@@ -433,6 +433,109 @@ pub async fn decrypt_pdf(
 
 // ------------------------------------------------------------------ office
 
+/// How LibreOffice has to be asked to read one kind of file and write another.
+#[derive(Debug, PartialEq, Eq)]
+struct OfficePlan {
+    /// `--infilter`, when LibreOffice would otherwise open the file in the wrong application.
+    infilter: Option<&'static str>,
+    /// What goes after `--convert-to`: a bare extension, or `extension:Filter Name:{options}`.
+    convert_to: String,
+}
+
+/// Spreadsheets and slides are not word-processor documents: LibreOffice has no Word, ODT or RTF
+/// export for them.
+fn is_writer_source(input_ext: &str) -> bool {
+    !matches!(input_ext, "xls" | "xlsx" | "ods" | "ppt" | "pptx" | "odp")
+}
+
+fn office_plan(input_ext: &str, target: &str) -> OfficePlan {
+    // A PDF opens in Draw, a drawing program with no Word export: `--convert-to docx` alone ends
+    // with "no export filter" and writes nothing. Reading it with the Writer import filter
+    // makes it a text document, which every document format can be written from.
+    let infilter = (input_ext == "pdf").then_some("writer_pdf_import");
+    let convert_to = match target {
+        // Plain HTML export leaves each picture beside the page as a separate file, and the
+        // conversion folder is searched for "the" result. Embedding the pictures makes the page
+        // one self-contained file.
+        "html" if is_writer_source(input_ext) => {
+            r#"html:XHTML Writer File:{"EmbedImages":{"type":"boolean","value":"true"}}"#.to_string()
+        }
+        other => other.to_string(),
+    };
+    OfficePlan { infilter, convert_to }
+}
+
+/// The converted file in LibreOffice's output folder. Normally the only file; if anything else
+/// was written beside it, the one with the requested extension wins.
+fn pick_converted(dir: &std::path::Path, target: &str) -> Option<PathBuf> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_file())
+        .collect();
+    files.sort();
+    let wanted = files
+        .iter()
+        .position(|p| p.extension().map(|e| e.eq_ignore_ascii_case(target)).unwrap_or(false));
+    match wanted {
+        Some(i) => Some(files.swap_remove(i)),
+        None => files.into_iter().next(),
+    }
+}
+
+/// `file://` URL for a path, with everything but the safe characters percent-encoded. The
+/// application support folder has a space in its name, which LibreOffice rejects unescaped.
+fn file_url(path: &std::path::Path) -> String {
+    use std::os::unix::ffi::OsStrExt;
+    let mut url = String::from("file://");
+    for &b in path.as_os_str().as_bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => url.push(b as char),
+            _ => url.push_str(&format!("%{b:02X}")),
+        }
+    }
+    url
+}
+
+/// A profile folder of Toolbox's own, so a LibreOffice window the person has open (or one that
+/// is still shutting down) never holds the lock that headless conversions need.
+fn office_profile_arg() -> String {
+    let dir = crate::settings::config_dir().join("libreoffice-profile");
+    std::fs::create_dir_all(&dir).ok();
+    format!("-env:UserInstallation={}", file_url(&dir))
+}
+
+/// One LibreOffice conversion at a time: they share that profile, and two instances starting
+/// on it together crash each other.
+static OFFICE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Run one LibreOffice conversion into `work` and return the file it wrote there.
+async fn office_convert(
+    job: Option<&jobs::JobHandle>,
+    soffice: &std::path::Path,
+    input: &std::path::Path,
+    target: &str,
+    work: &std::path::Path,
+) -> AppResult<PathBuf> {
+    let input_ext = paths::extension(input);
+    let plan = office_plan(&input_ext, target);
+    let mut args: Vec<String> = vec![office_profile_arg(), "--headless".into(), "--norestore".into()];
+    if let Some(filter) = plan.infilter {
+        args.push(format!("--infilter={filter}"));
+    }
+    args.extend([
+        "--convert-to".to_string(),
+        plan.convert_to,
+        "--outdir".to_string(),
+        work.to_string_lossy().to_string(),
+        input.to_string_lossy().to_string(),
+    ]);
+    let _one_at_a_time = OFFICE_LOCK.lock().await;
+    let out = jobs::run(job, soffice, &args).await?;
+    pick_converted(work, target).ok_or_else(|| office_failure(&input_ext, target, &out))
+}
+
 /// Convert documents with LibreOffice (DOCX ↔ PDF and friends).
 #[tauri::command]
 pub async fn convert_document(
@@ -459,31 +562,20 @@ pub async fn convert_document(
         }
         ctx.emit_item(i, 0.2, f);
         let outcome = async {
-            let out_dir = paths::output_dir_for(f, &output)?;
+            let dest = paths::resolve_destination(f, &output, &target)?;
+            if dest.is_skipped() {
+                return Ok(FileResult::skipped(&dest, f));
+            }
             let work = std::env::temp_dir().join(format!("toolbox-lo-{}", uuid::Uuid::new_v4().simple()));
             std::fs::create_dir_all(&work)?;
-            let args: Vec<String> = vec![
-                "--headless".into(),
-                "--norestore".into(),
-                "--convert-to".into(),
-                target.clone(),
-                "--outdir".into(),
-                work.to_string_lossy().to_string(),
-                f.to_string_lossy().to_string(),
-            ];
-            let out = jobs::run(Some(&ctx.handle), &soffice, &args).await?;
-            let produced: Option<PathBuf> = std::fs::read_dir(&work)
-                .ok()
-                .and_then(|rd| rd.filter_map(|e| e.ok()).map(|e| e.path()).find(|p| p.is_file()));
-            let Some(produced) = produced else {
-                std::fs::remove_dir_all(&work).ok();
-                return Err(jobs::explain_failure("Converting the document", &out));
+            let produced = office_convert(Some(&ctx.handle), &soffice, f, &target, &work).await;
+            let produced = match produced {
+                Ok(p) => p,
+                Err(e) => {
+                    std::fs::remove_dir_all(&work).ok();
+                    return Err(e);
+                }
             };
-            let dest = paths::finalize_destination(
-                out_dir.join(format!("{}.{}", paths::stem(f), target)),
-                f,
-                &output.collision,
-            )?;
             std::fs::copy(&produced, &dest.path)?;
             std::fs::remove_dir_all(&work).ok();
             Ok(FileResult::from_source(&dest.path, f, dest.disposition))
@@ -491,11 +583,28 @@ pub async fn convert_document(
         .await;
         match outcome {
             Ok(r) => batch.results.push(r),
+            Err(e) if e.kind() == ErrorKind::Cancelled => {
+                batch.cancelled = true;
+                break;
+            }
             Err(e) => batch.push_failure(f, e),
         }
     }
     batch.elapsed_ms = now_ms().saturating_sub(started);
     Ok(batch)
+}
+
+/// Say what went wrong in terms of the files, not LibreOffice's "no export filter".
+fn office_failure(input_ext: &str, target: &str, out: &jobs::ProcOutput) -> AppError {
+    let hay = format!("{}{}", out.stdout, out.stderr).to_lowercase();
+    if hay.contains("no export filter") {
+        return AppError::with_details(
+            ErrorKind::Unsupported,
+            format!("LibreOffice cannot turn a .{input_ext} file into .{target}."),
+            out.tail(),
+        );
+    }
+    jobs::explain_failure("Converting the document", out)
 }
 
 /// Convert with Pandoc (markdown/html/docx/latex/…).
@@ -669,6 +778,150 @@ mod tests {
             _ => "ebook".to_string(),
         };
         assert_eq!(preset, "ebook");
+    }
+
+    // ---- LibreOffice
+
+    #[test]
+    fn a_pdf_is_read_as_a_text_document_so_it_can_become_word() {
+        let plan = office_plan("pdf", "docx");
+        assert_eq!(plan.infilter, Some("writer_pdf_import"));
+        assert_eq!(plan.convert_to, "docx");
+        assert_eq!(office_plan("docx", "pdf").infilter, None);
+    }
+
+    #[test]
+    fn html_from_a_text_document_embeds_its_pictures() {
+        assert!(office_plan("docx", "html").convert_to.contains("EmbedImages"));
+        assert!(office_plan("pdf", "html").convert_to.contains("EmbedImages"));
+        // Spreadsheets and slides go through their own HTML export.
+        assert_eq!(office_plan("xlsx", "html").convert_to, "html");
+    }
+
+    #[test]
+    fn profile_urls_escape_spaces() {
+        let url = file_url(std::path::Path::new("/Users/me/Library/Application Support/Toolbox/lo"));
+        assert_eq!(url, "file:///Users/me/Library/Application%20Support/Toolbox/lo");
+    }
+
+    #[test]
+    fn the_converted_file_is_chosen_by_its_extension() {
+        let dir = std::env::temp_dir().join(format!("tb-pick-{}", uuid::Uuid::new_v4().simple()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(pick_converted(&dir, "html"), None);
+        std::fs::write(dir.join("a_image.png"), b"png").unwrap();
+        std::fs::write(dir.join("b.html"), b"<p>").unwrap();
+        assert_eq!(pick_converted(&dir, "html"), Some(dir.join("b.html")));
+        // Nothing with that extension: still hand back what there is rather than nothing.
+        assert_eq!(pick_converted(&dir, "docx"), Some(dir.join("a_image.png")));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// Real LibreOffice, real files. Skipped where LibreOffice is not installed.
+    mod libreoffice {
+        use super::*;
+        use std::path::Path;
+
+        fn soffice() -> Option<PathBuf> {
+            binaries::resolve("soffice")
+        }
+
+        fn scratch(tag: &str) -> PathBuf {
+            let dir = std::env::temp_dir().join(format!("tb-lo-{tag}-{}", uuid::Uuid::new_v4().simple()));
+            std::fs::create_dir_all(&dir).unwrap();
+            dir
+        }
+
+        async fn convert(soffice: &Path, input: &Path, target: &str) -> AppResult<PathBuf> {
+            let work = scratch("out");
+            office_convert(None, soffice, input, target, &work).await
+        }
+
+        /// A PDF with real text in it, made the way a person would: from a document.
+        async fn text_pdf(soffice: &Path, dir: &Path) -> PathBuf {
+            let txt = dir.join("letter.txt");
+            std::fs::write(&txt, "Quarterly report\n\nRevenue grew by twelve percent.\n").unwrap();
+            convert(soffice, &txt, "pdf").await.expect("text to pdf")
+        }
+
+        fn zip_text(path: &Path, member: &str) -> String {
+            let file = std::fs::File::open(path).unwrap();
+            let mut zip = zip::ZipArchive::new(file).expect("a zip container");
+            let mut entry = zip.by_name(member).unwrap_or_else(|_| panic!("{member} in {path:?}"));
+            let mut text = String::new();
+            std::io::Read::read_to_string(&mut entry, &mut text).unwrap();
+            text
+        }
+
+        #[tokio::test]
+        async fn pdf_to_word_odt_and_rtf() {
+            let Some(soffice) = soffice() else { return };
+            let dir = scratch("pdf");
+            let pdf = text_pdf(&soffice, &dir).await;
+
+            let docx = convert(&soffice, &pdf, "docx").await.expect("PDF to Word must produce a file");
+            assert!(zip_text(&docx, "word/document.xml").contains("Revenue grew"), "the words must survive");
+
+            let odt = convert(&soffice, &pdf, "odt").await.expect("PDF to ODT");
+            assert!(zip_text(&odt, "content.xml").contains("Revenue grew"));
+
+            let rtf = convert(&soffice, &pdf, "rtf").await.expect("PDF to RTF");
+            let body = std::fs::read(&rtf).unwrap();
+            assert!(body.starts_with(b"{\\rtf"), "an RTF file starts with {{\\rtf");
+            assert!(String::from_utf8_lossy(&body).contains("Revenue"));
+            std::fs::remove_dir_all(&dir).ok();
+        }
+
+        #[tokio::test]
+        async fn word_to_pdf_and_back_to_other_formats() {
+            let Some(soffice) = soffice() else { return };
+            let docx = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/with-image.docx");
+            let pdf = convert(&soffice, &docx, "pdf").await.expect("Word to PDF");
+            assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF"));
+            for target in ["odt", "rtf", "txt"] {
+                let out = convert(&soffice, &docx, target).await.unwrap_or_else(|e| panic!("docx to {target}: {e:?}"));
+                assert!(std::fs::metadata(out).unwrap().len() > 0);
+            }
+        }
+
+        /// Plain HTML export writes the pictures as separate files; the result must be the
+        /// page itself, with the pictures inside it.
+        #[tokio::test]
+        async fn word_to_html_is_one_self_contained_file() {
+            let Some(soffice) = soffice() else { return };
+            let docx = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/with-image.docx");
+            let work = scratch("html");
+            let html = office_convert(None, &soffice, &docx, "html", &work).await.expect("Word to HTML");
+            assert_eq!(html.extension().and_then(|e| e.to_str()), Some("html"), "picked {html:?}");
+            let page = std::fs::read_to_string(&html).unwrap();
+            assert!(page.contains("data:image"), "the picture should be inside the page");
+            assert_eq!(std::fs::read_dir(&work).unwrap().count(), 1, "no stray picture files");
+            std::fs::remove_dir_all(&work).ok();
+        }
+
+        #[tokio::test]
+        async fn spreadsheets_and_slides_become_pdf() {
+            let Some(soffice) = soffice() else { return };
+            let dir = scratch("office");
+            let csv = dir.join("table.csv");
+            std::fs::write(&csv, "a,b\n1,2\n").unwrap();
+            let xlsx = convert(&soffice, &csv, "xlsx").await.expect("csv to xlsx");
+            let pdf = convert(&soffice, &xlsx, "pdf").await.expect("xlsx to pdf");
+            assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF"));
+            std::fs::remove_dir_all(&dir).ok();
+        }
+
+        #[tokio::test]
+        async fn a_spreadsheet_cannot_become_word_and_says_so() {
+            let Some(soffice) = soffice() else { return };
+            let dir = scratch("nope");
+            let csv = dir.join("table.csv");
+            std::fs::write(&csv, "a,b\n1,2\n").unwrap();
+            let xlsx = convert(&soffice, &csv, "xlsx").await.unwrap();
+            let AppError::Friendly { message, .. } = convert(&soffice, &xlsx, "docx").await.unwrap_err();
+            assert!(message.contains("cannot turn a .xlsx file into .docx"), "{message}");
+            std::fs::remove_dir_all(&dir).ok();
+        }
     }
 
     #[test]

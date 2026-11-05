@@ -134,6 +134,38 @@ const EXTRA_DIRS: &[&str] = &[
     "/opt/anaconda3/bin",
 ];
 
+/// Where Homebrew puts the programs the tools lean on (ffmpeg, ghostscript, deno, …).
+const HOMEBREW_DIRS: &[&str] = &["/opt/homebrew/bin", "/opt/homebrew/sbin", "/usr/local/bin", "/usr/local/sbin"];
+
+/// The `PATH` an external program should run with.
+///
+/// An app opened from the Dock or Launchpad gets launchd's bare `PATH`
+/// (`/usr/bin:/bin:/usr/sbin:/sbin`), not the one a terminal has. The program itself is found by
+/// absolute path, but the programs *it* starts are not: yt-dlp cannot merge video and audio
+/// without `ffmpeg`, or run YouTube's signature code without `deno`, and ImageMagick cannot read
+/// a PDF without `gs`. So Homebrew's folders and the program's own folder are added to the end
+/// of whatever the app already has, which leaves anything the user set up first in line.
+pub fn child_path(bin: &std::path::Path) -> std::ffi::OsString {
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    let inherited = std::env::var_os("PATH").map(|p| std::env::split_paths(&p).collect::<Vec<_>>()).unwrap_or_default();
+    for dir in inherited {
+        if !dir.as_os_str().is_empty() && !dirs.contains(&dir) {
+            dirs.push(dir);
+        }
+    }
+    let extra = HOMEBREW_DIRS
+        .iter()
+        .map(PathBuf::from)
+        .chain(["/usr/bin", "/bin", "/usr/sbin", "/sbin"].iter().map(PathBuf::from))
+        .chain(bin.parent().map(|p| p.to_path_buf()));
+    for dir in extra {
+        if !dir.as_os_str().is_empty() && !dirs.contains(&dir) {
+            dirs.push(dir);
+        }
+    }
+    std::env::join_paths(dirs).unwrap_or_default()
+}
+
 /// Resolve an executable path for `id`, honouring a user override first.
 pub fn resolve(id: &str) -> Option<PathBuf> {
     let cfg = settings::load();
@@ -241,4 +273,31 @@ pub fn probe(id: &str) -> BinaryStatus {
 
 pub fn probe_all() -> Vec<BinaryStatus> {
     BINARIES.iter().map(|b| probe(b.id)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    fn entries(path: &std::ffi::OsStr) -> Vec<PathBuf> {
+        std::env::split_paths(path).collect()
+    }
+
+    #[test]
+    fn child_path_adds_homebrew_after_what_the_app_already_has() {
+        let path = child_path(Path::new("/opt/homebrew/bin/yt-dlp"));
+        let dirs = entries(&path);
+        assert!(dirs.contains(&PathBuf::from("/opt/homebrew/bin")), "ffmpeg and deno live here: {dirs:?}");
+        assert!(dirs.contains(&PathBuf::from("/usr/bin")));
+        // No folder is listed twice.
+        let mut seen = std::collections::HashSet::new();
+        assert!(dirs.iter().all(|d| seen.insert(d.clone())), "duplicate entries: {dirs:?}");
+    }
+
+    #[test]
+    fn child_path_includes_the_programs_own_folder() {
+        let path = child_path(Path::new("/opt/somewhere/else/tool"));
+        assert!(entries(&path).contains(&PathBuf::from("/opt/somewhere/else")));
+    }
 }

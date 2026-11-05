@@ -3,8 +3,8 @@
  *
  * `tesseract --list-langs` answers with ISO 639-2/T codes ("spa"), codes with a
  * script or variant tail ("chi_sim", "srp_latn"), script bundles
- * ("script/Latin") and two entries that are not languages at all ("osd",
- * "equ"). A picker that shows those raw is a puzzle, so every code is turned
+ * ("script/Latin") and a few entries that are not languages at all ("osd",
+ * "equ", "snum"). A picker that shows those raw is a puzzle, so every code is turned
  * into something a person recognises.
  */
 
@@ -12,6 +12,7 @@
 const SPECIAL: Record<string, string> = {
   osd: 'Page orientation and script detection',
   equ: 'Maths and equations',
+  snum: 'Serial numbers',
   chi_sim: 'Chinese (Simplified)',
   chi_tra: 'Chinese (Traditional)',
   chi_sim_vert: 'Chinese (Simplified, vertical)',
@@ -42,7 +43,7 @@ const VARIANTS: Record<string, string> = {
 };
 
 /** Entries that help recognition but are not languages you would pick alone. */
-export const NON_LANGUAGE_CODES = new Set(['osd', 'equ']);
+export const NON_LANGUAGE_CODES = new Set(['osd', 'equ', 'snum']);
 
 function intlName(code: string): string | null {
   try {
