@@ -214,6 +214,9 @@ where
     // Keep child processes out of the app's interactive environment.
     cmd.env_remove("LD_PRELOAD");
     cmd.env_remove("DYLD_INSERT_LIBRARIES");
+    // The helpers these programs start (ffmpeg, gs, deno, …) live in Homebrew's folders, which a
+    // Dock-launched app does not have on its PATH.
+    cmd.env("PATH", crate::binaries::child_path(bin));
 
     let mut child = cmd.spawn().map_err(|e| {
         AppError::with_details(

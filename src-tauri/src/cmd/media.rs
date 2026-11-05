@@ -273,16 +273,25 @@ fn wm_op() -> f32 { 0.5 }
 fn wm_margin() -> u32 { 24 }
 fn wm_scale() -> f32 { 0.2 }
 
+/// Text for a filter option, escaped for the two layers FFmpeg reads it through: first the
+/// option value (`\`, `'` and `:` are special there), then the filtergraph around it (`\`, `'`,
+/// `[`, `]`, `,`, `;` and `=`). Quoting the value does not help — a quote cannot be escaped
+/// inside quotes — so every special character gets its own backslash instead.
 fn escape_filter_value(s: &str) -> String {
-    // FFmpeg filtergraph escaping for values passed inside a filter chain.
-    s.replace('\\', "\\\\")
-        .replace(':', "\\:")
-        .replace('\'', "\\'")
-        .replace('[', "\\[")
-        .replace(']', "\\]")
-        .replace(',', "\\,")
-        .replace(';', "\\;")
-        .replace('%', "\\%")
+    let option_level: String = s
+        .chars()
+        .flat_map(|c| match c {
+            '\\' | '\'' | ':' => vec!['\\', c],
+            _ => vec![c],
+        })
+        .collect();
+    option_level
+        .chars()
+        .flat_map(|c| match c {
+            '\\' | '\'' | '[' | ']' | ',' | ';' | '=' => vec!['\\', c],
+            _ => vec![c],
+        })
+        .collect()
 }
 
 fn overlay_expr(position: &str, margin: u32) -> String {
@@ -469,7 +478,7 @@ async fn build_video_args(input: &Path, dest: &Path, ops: &VideoOps, ext: &str) 
         let alpha = wm.opacity.clamp(0.0, 1.0);
         let mut chain = vfilters.clone();
         chain.push(format!(
-            "drawtext=text='{text}':fontcolor=white@{alpha}:fontsize=h/22:box=1:boxcolor=black@0.35:boxborderw=8:x={x}:y={y}"
+            "drawtext=text={text}:expansion=none:fontcolor=white@{alpha}:fontsize=h/22:box=1:boxcolor=black@0.35:boxborderw=8:x={x}:y={y}"
         ));
         args.push("-vf".into());
         args.push(chain.join(","));
@@ -961,6 +970,12 @@ pub struct AudioTags {
     pub remove_all: bool,
 }
 
+/// Containers FFmpeg can attach a picture to. Ogg, Opus and WAV have no stream for one, and
+/// asking anyway ends in "Could not write header".
+fn can_hold_cover_art(ext: &str) -> bool {
+    !matches!(ext, "ogg" | "oga" | "opus" | "spx" | "wav" | "aiff" | "aif")
+}
+
 #[tauri::command]
 pub async fn write_audio_tags(
     app: AppHandle,
@@ -994,6 +1009,12 @@ pub async fn write_audio_tags(
             let mut args: Vec<String> = vec!["-i".into(), f.to_string_lossy().to_string()];
             let mut has_cover = false;
             if let Some(cover) = tags.cover.as_deref().filter(|c| !c.trim().is_empty()) {
+                if !can_hold_cover_art(&ext) {
+                    return Err(AppError::unsupported(format!(
+                        "{} files cannot carry cover art. Use an MP3, M4A or FLAC file for artwork, or leave the image out.",
+                        ext.to_uppercase()
+                    )));
+                }
                 let cover_path = paths::validate_input_file(cover)?;
                 args.push("-i".into());
                 args.push(cover_path.to_string_lossy().to_string());
@@ -1205,5 +1226,209 @@ mod tests {
         assert_eq!(parse_fps("30000/1001").map(|f| (f * 1000.0).round()), Some(29970.0));
         assert_eq!(parse_fps("0/0"), None);
         assert_eq!(parse_fps("nonsense"), None);
+    }
+
+    // ---- real FFmpeg --------------------------------------------------------------------
+    //
+    // Every case below is the JSON a tool sends, turned into FFmpeg arguments by the same
+    // `build_video_args` the app uses and run through the real program. FFmpeg changes between
+    // releases, so this is what says whether the tools still work with the one that is installed.
+    // Skipped where FFmpeg is not installed.
+
+    mod real_ffmpeg {
+        use super::*;
+        use serde_json::json;
+        use std::process::Command;
+
+        fn run(program: &Path, args: &[String]) -> Result<std::process::Output, String> {
+            Command::new(program)
+                .args(args)
+                .env("PATH", binaries::child_path(program))
+                .output()
+                .map_err(|e| e.to_string())
+        }
+
+        fn ffmpeg(ffmpeg: &Path, args: &[&str]) {
+            let mut full: Vec<String> = ["-hide_banner", "-nostdin", "-y", "-loglevel", "error"].map(String::from).to_vec();
+            full.extend(args.iter().map(|a| a.to_string()));
+            let out = run(ffmpeg, &full).expect("ffmpeg starts");
+            assert!(out.status.success(), "fixture failed: {}", String::from_utf8_lossy(&out.stderr));
+        }
+
+        fn duration(ffprobe: &Path, file: &Path) -> Option<f64> {
+            let args: Vec<String> = ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0"]
+                .iter()
+                .map(|s| s.to_string())
+                .chain([file.to_string_lossy().to_string()])
+                .collect();
+            let out = run(ffprobe, &args).ok()?;
+            String::from_utf8_lossy(&out.stdout).trim().parse().ok()
+        }
+
+        struct Media {
+            dir: PathBuf,
+            video: PathBuf,
+            tagged_mp3: PathBuf,
+            wav: PathBuf,
+            logo: PathBuf,
+        }
+
+        fn make_media(ffmpeg_bin: &Path) -> Media {
+            let dir = std::env::temp_dir().join(format!("tb-ff-{}", uuid::Uuid::new_v4().simple()));
+            std::fs::create_dir_all(&dir).unwrap();
+            let p = |n: &str| dir.join(n).to_string_lossy().to_string();
+            ffmpeg(ffmpeg_bin, &["-f", "lavfi", "-i", "testsrc=duration=3:size=320x180:rate=15", "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", &p("video.mp4")]);
+            ffmpeg(ffmpeg_bin, &["-f", "lavfi", "-i", "color=c=red:s=80x40", "-frames:v", "1", &p("logo.png")]);
+            ffmpeg(ffmpeg_bin, &["-f", "lavfi", "-i", "sine=frequency=440:duration=3", "-i", &p("logo.png"), "-map", "0:a", "-map", "1:v",
+                "-c:a", "libmp3lame", "-c:v", "mjpeg", "-disposition:v", "attached_pic", &p("tone.mp3")]);
+            ffmpeg(ffmpeg_bin, &["-f", "lavfi", "-i", "sine=frequency=440:duration=3", &p("tone.wav")]);
+            Media { video: dir.join("video.mp4"), tagged_mp3: dir.join("tone.mp3"), wav: dir.join("tone.wav"), logo: dir.join("logo.png"), dir }
+        }
+
+        #[derive(Clone, Copy)]
+        enum Source {
+            Video,
+            TaggedMp3,
+            Wav,
+        }
+
+        struct Case {
+            name: &'static str,
+            source: Source,
+            ops: serde_json::Value,
+            /// Seconds the result should last, as a range. `None` means "just has to play".
+            length: Option<(f64, f64)>,
+        }
+
+        fn case(name: &'static str, source: Source, ops: serde_json::Value) -> Case {
+            Case { name, source, ops, length: None }
+        }
+
+        fn cases(logo: &Path) -> Vec<Case> {
+            use Source::*;
+            let cap = "scale=-2:'trunc(min(ih,90)/2)*2':flags=lanczos";
+            let cap_w = "scale='trunc(min(iw,160)/2)*2':-2:flags=lanczos";
+            let logo = logo.to_string_lossy().to_string();
+            let mark = |extra: serde_json::Value| {
+                let mut base = json!({ "position": "bottom-right", "opacity": 0.6, "margin": 24, "scale": 0.2 });
+                base.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+                json!({ "watermark": base })
+            };
+            let mut list = vec![
+                // video → video, the way Convert and Video Converter send them
+                case("mp4", Video, json!({ "format": "mp4", "crf": 23 })),
+                case("mov", Video, json!({ "format": "mov", "crf": 23 })),
+                case("mkv", Video, json!({ "format": "mkv", "crf": 23 })),
+                case("m4v", Video, json!({ "format": "m4v", "crf": 23 })),
+                case("webm", Video, json!({ "format": "webm", "crf": 32 })),
+                case("avi", Video, json!({ "format": "avi" })),
+                case("hevc", Video, json!({ "format": "mp4", "videoCodec": "libx265", "audioCodec": "aac", "crf": 28, "preset": "ultrafast" })),
+                case("vp9-constant-quality", Video, json!({ "format": "webm", "videoCodec": "libvpx-vp9", "audioCodec": "libopus", "videoBitrate": "0", "crf": 33 })),
+                case("compress-capped", Video, json!({ "format": "mp4", "videoCodec": "libx264", "audioCodec": "aac", "crf": 32, "preset": "veryfast", "extraFilters": [cap] })),
+                // video → audio
+                case("video-to-mp3", Video, json!({ "format": "mp3", "audioOnly": true })),
+                case("video-to-m4a", Video, json!({ "format": "m4a", "audioOnly": true })),
+                case("video-to-wav", Video, json!({ "format": "wav", "audioOnly": true })),
+                case("video-to-flac", Video, json!({ "format": "flac", "audioOnly": true })),
+                // size and shape
+                case("resize-width", Video, json!({ "width": 160 })),
+                case("resize-box", Video, json!({ "width": 160, "height": 90 })),
+                case("resize-never-enlarge", Video, json!({ "extraFilters": [cap_w], "crf": 23 })),
+                case("crop", Video, json!({ "crop": [10, 10, 100, 80], "videoCodec": "libx264", "crf": 23 })),
+                case("crop-webm", Video, json!({ "format": "webm", "crop": [10, 10, 100, 80], "videoCodec": "libvpx-vp9", "videoBitrate": "0", "crf": 33 })),
+                case("rotate-90", Video, json!({ "rotate": 90 })),
+                case("rotate-180", Video, json!({ "rotate": 180 })),
+                case("rotate-270", Video, json!({ "rotate": 270 })),
+                case("flip-horizontal", Video, json!({ "flipHorizontal": true })),
+                case("flip-vertical", Video, json!({ "flipVertical": true })),
+                // time
+                Case { length: Some((1.0, 3.0)), ..case("trim-copy", Video, json!({ "start": 0.5, "duration": 1.5, "copyStreams": true })) },
+                Case { length: Some((1.2, 1.8)), ..case("trim-reencode", Video, json!({ "start": 0.5, "end": 2.0, "crf": 23 })) },
+                Case { length: Some((1.3, 1.7)), ..case("speed-double", Video, json!({ "speed": 2 })) },
+                Case { length: Some((5.5, 6.5)), ..case("speed-half", Video, json!({ "speed": 0.5 })) },
+                Case { length: Some((2.7, 3.3)), ..case("reverse", Video, json!({ "reverse": true })) },
+                case("frame-rate", Video, json!({ "fps": 24, "crf": 23 })),
+                case("frame-rate-interpolated", Video, json!({ "extraFilters": ["minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1"], "crf": 30, "preset": "ultrafast" })),
+                // sound inside a video
+                case("remove-audio", Video, json!({ "removeAudio": true })),
+                case("video-mono", Video, json!({ "toMono": true })),
+                case("video-louder", Video, json!({ "volume": 1.5 })),
+                case("video-normalised", Video, json!({ "normalizeAudio": true })),
+                // watermarks
+                case("watermark-text", Video, mark(json!({ "text": "Toolbox" }))),
+                case("watermark-text-with-punctuation", Video, mark(json!({ "text": "It's 50% done: yes, [really]; \\ ok" }))),
+                case("watermark-logo", Video, mark(json!({ "logo": logo }))),
+                // audio → audio, with cover art on the source
+                case("tagged-to-mp3", TaggedMp3, json!({ "format": "mp3", "videoCodec": "copy", "audioCodec": "libmp3lame", "audioBitrate": "192k" })),
+                case("tagged-to-m4a", TaggedMp3, json!({ "format": "m4a", "videoCodec": "copy", "audioCodec": "aac", "audioBitrate": "192k" })),
+                case("tagged-to-wav", TaggedMp3, json!({ "format": "wav", "audioOnly": true })),
+                case("tagged-to-flac", TaggedMp3, json!({ "format": "flac", "audioOnly": true })),
+                case("tagged-to-ogg", TaggedMp3, json!({ "format": "ogg", "audioOnly": true })),
+                case("tagged-to-opus", TaggedMp3, json!({ "format": "opus", "audioOnly": true })),
+                case("tagged-compressed-mono", TaggedMp3, json!({ "format": "mp3", "videoCodec": "copy", "audioCodec": "libmp3lame", "audioBitrate": "96k", "toMono": true })),
+                case("tagged-louder", TaggedMp3, json!({ "audioOnly": true, "volume": 1.5 })),
+                case("tagged-normalised", TaggedMp3, json!({ "audioOnly": true, "normalizeAudio": true })),
+                case("tagged-pitch", TaggedMp3, json!({ "audioOnly": true, "pitch": 1.122462, "sampleRate": 44100 })),
+                Case { length: Some((1.8, 2.2)), ..case("tagged-speed", TaggedMp3, json!({ "audioOnly": true, "speed": 1.5 })) },
+                Case { length: Some((1.2, 1.8)), ..case("tagged-trim-copy", TaggedMp3, json!({ "audioOnly": true, "start": 0.5, "end": 2.0, "copyStreams": true })) },
+                case("merge-intermediate", TaggedMp3, json!({ "format": "wav", "audioOnly": true, "sampleRate": 44100, "toMono": true })),
+                // audio with nothing attached
+                case("wav-to-mp3", Wav, json!({ "format": "mp3", "videoCodec": "copy", "audioCodec": "libmp3lame", "audioBitrate": "192k" })),
+                case("wav-to-m4a", Wav, json!({ "format": "m4a", "videoCodec": "copy", "audioCodec": "aac", "audioBitrate": "192k" })),
+                case("wav-to-opus", Wav, json!({ "format": "opus", "audioOnly": true })),
+            ];
+            // `Case { length, ..case(..) }` needs the struct update, so keep the order stable.
+            list.shrink_to_fit();
+            list
+        }
+
+        #[tokio::test]
+        async fn every_media_tool_works_with_the_installed_ffmpeg() {
+            let (Some(ffmpeg_bin), Some(ffprobe)) = (binaries::resolve("ffmpeg"), binaries::resolve("ffprobe")) else {
+                return;
+            };
+            let media = make_media(&ffmpeg_bin);
+            let mut failures: Vec<String> = Vec::new();
+
+            for case in cases(&media.logo) {
+                let input = match case.source {
+                    Source::Video => &media.video,
+                    Source::TaggedMp3 => &media.tagged_mp3,
+                    Source::Wav => &media.wav,
+                };
+                let ops: VideoOps = serde_json::from_value(case.ops.clone()).expect(case.name);
+                let ext = ops.format.clone().unwrap_or_else(|| paths::extension(input));
+                let dest = media.dir.join(format!("out-{}.{ext}", case.name));
+                let args = match build_video_args(input, &dest, &ops, &ext).await {
+                    Ok(a) => a,
+                    Err(e) => {
+                        failures.push(format!("{}: could not build arguments: {e:?}", case.name));
+                        continue;
+                    }
+                };
+                let mut full: Vec<String> = ["-hide_banner", "-nostdin", "-y", "-loglevel", "error"].map(String::from).to_vec();
+                full.extend(args);
+                match run(&ffmpeg_bin, &full) {
+                    Err(e) => failures.push(format!("{}: {e}", case.name)),
+                    Ok(out) if !out.status.success() => {
+                        let err = String::from_utf8_lossy(&out.stderr);
+                        failures.push(format!("{}: {}", case.name, err.lines().last().unwrap_or("failed")));
+                    }
+                    Ok(_) => match duration(&ffprobe, &dest) {
+                        None => failures.push(format!("{}: the result does not play", case.name)),
+                        Some(d) => {
+                            if let Some((lo, hi)) = case.length {
+                                if d < lo || d > hi {
+                                    failures.push(format!("{}: lasts {d:.2}s, expected {lo}–{hi}s", case.name));
+                                }
+                            }
+                        }
+                    },
+                }
+            }
+            std::fs::remove_dir_all(&media.dir).ok();
+            assert!(failures.is_empty(), "{} tool run(s) failed:\n  {}", failures.len(), failures.join("\n  "));
+        }
     }
 }
