@@ -12,6 +12,22 @@ or creating an account.
 
 ---
 
+## Screenshots
+
+The native macOS app, captured in light mode.
+
+### Home
+
+![Toolbox home with the file drop zone, quick actions and tool categories](docs/screenshots/home.jpg)
+
+### Image tools
+
+![Image tools for conversion, resizing, compression, metadata and more](docs/screenshots/images.jpg)
+
+### Radial menu
+
+![Radial menu appearance preview and global shortcut controls](docs/screenshots/radial-menu.jpg)
+
 ## What is Toolbox
 
 Toolbox is a native macOS app that replaces the pile of single-purpose conversion
