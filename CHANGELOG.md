@@ -38,6 +38,9 @@ First public release.
   `vite`, `vitest`, `typescript-eslint` and `fast-xml-parser` to patched versions.
   Toolbox's own extraction never used the affected `extract()` APIs, but no flagged
   version remains in the dependency tree.
+- Fixed exponential regex backtracking (ReDoS) found by CodeQL: pasting a crafted
+  data URL into *Image from Base64*, or a crafted prologue into *XML Formatter*,
+  could hang the tool.
 
 [Unreleased]: https://github.com/Ale-Newport/swapIT/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/Ale-Newport/swapIT/releases/tag/v0.1.0
