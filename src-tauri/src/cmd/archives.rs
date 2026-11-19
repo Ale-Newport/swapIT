@@ -78,8 +78,8 @@ pub async fn create_archive(
         "zip" => {
             let file = std::fs::File::create(&dest.path)?;
             let mut zip = zip::ZipWriter::new(file);
-            let options: zip::write::FileOptions<'_, ()> =
-                zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+            let options =
+                zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
             let mut buf = vec![0u8; 256 * 1024];
             for (i, (path, name)) in entries.iter().enumerate() {
                 ctx.bail_if_cancelled()?;
@@ -203,7 +203,7 @@ pub async fn extract_archive(
                 break;
             }
             let mut entry = zip.by_index(i)?;
-            let entry_name = entry.name().to_string();
+            let entry_name = entry.name()?.to_string();
             ctx.emit(i, Some(i as f64 / total.max(1) as f64), Some(entry_name.clone()), None);
             if entry.is_dir() {
                 continue;
@@ -293,7 +293,7 @@ pub fn list_archive(input: String) -> AppResult<Vec<ArchiveEntry>> {
         for i in 0..zip.len() {
             let entry = zip.by_index(i)?;
             out.push(ArchiveEntry {
-                name: entry.name().to_string(),
+                name: entry.name()?.to_string(),
                 size: entry.size(),
                 compressed: entry.compressed_size(),
                 is_dir: entry.is_dir(),
