@@ -1,6 +1,5 @@
 import { writeImage } from '@tauri-apps/plugin-clipboard-manager';
 import { open } from '@tauri-apps/plugin-dialog';
-import { toCanvas, toSVG } from 'bwip-js/browser';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { appPaths, revealInFinder } from '@/core/bridge';
 import { dirname, formatBytes, shortenPath } from '@/core/format';
@@ -38,6 +37,7 @@ import {
   type BarcodeOptions,
   type SymbologyId,
 } from './logic';
+import { barcodeSvg, drawBarcode } from './render';
 
 type Mode = 'single' | 'batch';
 type Format = 'png' | 'svg';
@@ -110,7 +110,7 @@ export default function BarcodeGenerator() {
     const canvas = canvasRef.current;
     if (!canvas || !validation.ok) return;
     try {
-      toCanvas(canvas, bwipOptions(symbology, validation.text, options));
+      drawBarcode(canvas, bwipOptions(symbology, validation.text, options));
       setRenderError(null);
     } catch (err) {
       // Wipe what the previous value drew — a leftover barcode beside the error
@@ -151,7 +151,7 @@ export default function BarcodeGenerator() {
 
   const renderCanvas = (text: string): HTMLCanvasElement => {
     const canvas = document.createElement('canvas');
-    toCanvas(canvas, bwipOptions(symbology, text, options));
+    drawBarcode(canvas, bwipOptions(symbology, text, options));
     return canvas;
   };
 
@@ -163,7 +163,7 @@ export default function BarcodeGenerator() {
 
   const saveSvg = () =>
     void runExport('svg', async () => {
-      const svg = withExplicitSize(toSVG(bwipOptions(symbology, validation.text, options)));
+      const svg = withExplicitSize(barcodeSvg(bwipOptions(symbology, validation.text, options)));
       return saveTextAs(svg, `${safeFilename(validation.text)}.svg`);
     });
 
@@ -196,7 +196,7 @@ export default function BarcodeGenerator() {
             const bytes = await canvasToBytes(renderCanvas(entry.validation.text));
             results.push(await saveBytes(bytes, { source: null, output, ext: 'png' }));
           } else {
-            const svg = withExplicitSize(toSVG(bwipOptions(symbology, entry.validation.text, options)));
+            const svg = withExplicitSize(barcodeSvg(bwipOptions(symbology, entry.validation.text, options)));
             results.push(await saveText(svg, { source: null, output, ext: 'svg' }));
           }
         } catch (err) {

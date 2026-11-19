@@ -207,3 +207,24 @@ describe('output helpers', () => {
     expect(parseBatchLines('   ')).toEqual([]);
   });
 });
+
+describe('barcode encoders', () => {
+  it('has a bundled encoder for every symbology the tool offers', async () => {
+    const { SUPPORTED_BCIDS } = await import('./render');
+    const { SYMBOLOGIES } = await import('./logic');
+    for (const s of SYMBOLOGIES) expect(SUPPORTED_BCIDS, `${s.id} → ${s.bcid}`).toContain(s.bcid);
+  });
+
+  it('draws every symbology as SVG with the named encoders', async () => {
+    const { barcodeSvg } = await import('./render');
+    const { SYMBOLOGIES, bwipOptions, DEFAULT_BARCODE_OPTIONS } = await import('./logic');
+    const samples: Record<string, string> = {
+      code128: 'Toolbox-128', code39: 'TOOLBOX', ean13: '5901234123457', ean8: '96385074', upca: '036000291452',
+      itf14: '10012345678902', codabar: 'A40156B', datamatrix: 'https://example.com',
+    };
+    for (const s of SYMBOLOGIES) {
+      const svg = barcodeSvg(bwipOptions(s, samples[s.id] ?? '12345', DEFAULT_BARCODE_OPTIONS));
+      expect(svg, s.id).toMatch(/^<svg[\s\S]*<\/svg>\s*$/);
+    }
+  });
+});
