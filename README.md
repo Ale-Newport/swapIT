@@ -1,14 +1,60 @@
 <div align="center">
 
+<img src="assets/icon.png" width="96" alt="Toolbox icon">
+
 # Toolbox
 
-**A fast, local-first desktop toolkit for everyday file tasks.**
+**169 everyday file tools in one fast, private Mac app — convert, compress and edit images, video, audio and PDFs without uploading a single file.**
+
+[![CI](https://github.com/Ale-Newport/swapIT/actions/workflows/ci.yml/badge.svg)](https://github.com/Ale-Newport/swapIT/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Ale-Newport/swapIT/actions/workflows/codeql.yml/badge.svg)](https://github.com/Ale-Newport/swapIT/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/Ale-Newport/swapIT?sort=semver&color=0a84ff)](https://github.com/Ale-Newport/swapIT/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+<br>
+![macOS 11+](https://img.shields.io/badge/macOS-11%2B-000?logo=apple&logoColor=white)
+![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)
+![Rust](https://img.shields.io/badge/Rust-stable-CE422B?logo=rust&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-3%2C100%2B-brightgreen)
+
+[**Download for macOS**](https://github.com/Ale-Newport/swapIT/releases/latest) ·
+[**Try the web demo**](https://ale-newport.github.io/swapIT/) ·
+[Features](#features) ·
+[Radial menu](#radial-menu) ·
+[Build from source](#installation) ·
+[Contributing](CONTRIBUTING.md)
+
+<br>
+
+<img src="docs/demo.gif" width="860" alt="Toolbox in action: the ⌘K palette opens the QR generator, which draws a scannable code as a URL is typed; JSON is converted to YAML as it is typed; then the radial menu opens over a photo and the cursor moves across its petals">
+
+<sub>Recorded from the <a href="https://ale-newport.github.io/swapIT/">web demo</a> — the same UI and tool code as the Mac app.</sub>
+
+</div>
 
 Convert HEIC to JPG, compress a PDF, pull the audio out of an MP4, generate a QR code,
 optimise an SVG, format some JSON — without opening a browser tab, uploading a file,
 or creating an account.
 
-</div>
+## Quick start
+
+**Download:** grab `Toolbox_<version>_universal.dmg` from the
+[latest release](https://github.com/Ale-Newport/swapIT/releases/latest), open it and drag
+Toolbox to Applications. The build is ad-hoc signed (no paid Apple Developer ID), so the
+first time, right-click the app › **Open** — or run
+`xattr -dr com.apple.quarantine /Applications/Toolbox.app`. [Why?](#about-signing)
+
+**Or build and install it in one command** (needs Node.js 20+ and Rust):
+
+```bash
+git clone https://github.com/Ale-Newport/swapIT.git toolbox && cd toolbox && npm install && npm run install:app
+```
+
+**Or just try it in your browser:** the [web demo](https://ale-newport.github.io/swapIT/)
+runs every tool that works without the Mac backend — text, developer, QR, SVG,
+generators, calculators — plus a preview of the radial menu at
+[`#/radial-demo`](https://ale-newport.github.io/swapIT/?demo#/radial-demo).
 
 ---
 
@@ -209,7 +255,7 @@ it at a binary elsewhere on disk.
 ## Installation
 
 ```bash
-git clone <this repo> toolbox
+git clone https://github.com/Ale-Newport/swapIT.git toolbox
 cd toolbox
 npm install
 npm run install:app
@@ -274,7 +320,9 @@ npm run tauri dev
 ```
 
 Frontend-only work can skip the Rust build with `npm run dev`, though anything that
-calls a backend command needs the full app.
+calls a backend command needs the full app. `npm run build:web` builds the browser
+demo, where the backend is replaced by `src/web/demoIpc.ts` and native-only commands
+fail with a clear "desktop only" message.
 
 | Command | What it does |
 | --- | --- |
@@ -288,6 +336,7 @@ calls a backend command needs the full app.
 | `npm run rust:clippy` | Clippy with warnings as errors |
 | `npm run rust:test` | Rust unit tests |
 | `npm run dev` → `/#/radial-demo` | Browser preview of the radial overlay with mocked IPC (dev builds only) |
+| `npm run build:web` / `npm run preview:web` | Build / serve the web demo (`dist-web/`, port 4317) |
 | `npm run check:all` | All of the above |
 | `node scripts/generate-icons.mjs` | Rebuild the curated lucide icon map |
 
@@ -360,8 +409,21 @@ backend; the path and archive safety properties are covered by unit tests.
 - The only outbound network request the app makes is Media Downloader fetching the
   URL you paste.
 
+## Contributing
+
+Contributions are very welcome — a new tool is one folder with two files. Start with
+[CONTRIBUTING.md](CONTRIBUTING.md), pick a
+[good first issue](https://github.com/Ale-Newport/swapIT/labels/good%20first%20issue), or
+say hello in [Discussions](https://github.com/Ale-Newport/swapIT/discussions). Please
+follow the [Code of Conduct](CODE_OF_CONDUCT.md) and report security issues privately
+as described in [SECURITY.md](SECURITY.md). Changes are tracked in
+[CHANGELOG.md](CHANGELOG.md).
+
+If Toolbox saves you a trip to a conversion website, a ⭐ helps other people find it.
+
 ## Licence
 
-Personal project. The external programs it drives keep their own licences
-(FFmpeg LGPL/GPL, ImageMagick Apache-2.0, Ghostscript AGPL, Poppler GPL,
-Tesseract Apache-2.0, QPDF Apache-2.0, yt-dlp Unlicense).
+[MIT](LICENSE) © Alejandro Newport Diaz. The external programs Toolbox drives are
+separate programs with their own licences (FFmpeg LGPL/GPL, ImageMagick Apache-2.0,
+Ghostscript AGPL, Poppler GPL, Tesseract Apache-2.0, QPDF Apache-2.0, LibreOffice
+MPL-2.0, Pandoc GPL, yt-dlp Unlicense); none of them is bundled with the app.
