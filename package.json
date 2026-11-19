@@ -71,7 +71,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2.11.4",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^22.20.2",
+    "@types/node": "^26.6.6",
     "@types/papaparse": "^5.3.16",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.3.0",
