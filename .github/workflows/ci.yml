@@ -103,5 +103,6 @@ jobs:
           persist-credentials: false
       - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
-          tool: actionlint,shellcheck
-      - run: actionlint -color
+          tool: actionlint
+      # shellcheck is preinstalled on ubuntu-latest; actionlint runs it on every run: block.
+      - run: shellcheck --version && actionlint -color
