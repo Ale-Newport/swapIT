@@ -31,7 +31,11 @@ type NodeKind = 'text' | 'cdata' | 'comment' | 'pi' | 'element';
  * hand or every DTD-validated document (plist, DocBook, XHTML, SVG 1.1) comes
  * back invalid.
  */
-const DOCTYPE = /^(\s*(?:<\?[\s\S]*?\?>\s*|<!--[\s\S]*?-->\s*)*)(<!DOCTYPE[^>[]*(?:\[[\s\S]*?\])?[^>]*>)/i;
+const DOCTYPE = /^(\s*(?:(?:<\?(?:[^?]|\?(?!>))*\?>|<!--(?:[^-]|-(?!->))*-->)\s*)*)(<!DOCTYPE[^>[]*(?:\[[^\]]*(?:\](?!\s*>)[^\]]*)*\]\s*)?>)/i;
+// Each part above can match a given run of text in only one way (no lazy
+// `[\s\S]*?` that could also swallow the next `?>`, `-->` or `]`), so a long
+// prologue that never reaches a DOCTYPE fails in linear time instead of
+// backtracking exponentially (CodeQL js/redos).
 
 function tagOf(node: OrderedNode): string {
   for (const key of Object.keys(node)) if (key !== ATTRS) return key;

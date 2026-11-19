@@ -103,3 +103,17 @@ describe('suggestedFilename', () => {
     expect(suggestedFilename('jpg')).toBe('image.jpg');
   });
 });
+
+describe('decodeImageData on hostile data URLs', () => {
+  it('rejects a data URL made of thousands of empty parameters quickly', () => {
+    const hostile = 'data:' + ';'.repeat(50_000);
+    const started = performance.now();
+    expect(() => decodeImageData(hostile)).toThrow();
+    expect(performance.now() - started).toBeLessThan(1500);
+  });
+
+  it('still reads parameters before ;base64', () => {
+    const url = `data:image/png;charset=binary;base64,${bytesToBase64(PNG_HEADER)}`;
+    expect(decodeImageData(url).mime).toBe('image/png');
+  });
+});
