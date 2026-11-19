@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in Toolbox does not work the way it should
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please **do not** report security problems here —
+        use [private vulnerability reporting](https://github.com/Ale-Newport/swapIT/security/advisories/new) instead.
+  - type: input
+    id: tool
+    attributes:
+      label: Tool or feature
+      description: Which tool, page or radial-menu action is affected?
+      placeholder: e.g. Images › Compress, PDF › PDF to Word, radial menu over full-screen apps
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Drop a 40 MB HEIC file on Home
+        2. Choose Convert to JPG
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened instead
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Settings › Advanced shows the versions of the external programs.
+      value: |
+        - Toolbox version / commit:
+        - macOS version and chip (Apple Silicon / Intel):
+        - Installed from: DMG / built from source
+        - Relevant external programs and versions (FFmpeg, ImageMagick, LibreOffice…):
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error message or details
+      description: Copy the error details from the tool page if there are any. Remove anything private.
+      render: text

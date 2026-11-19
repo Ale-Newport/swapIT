@@ -1,0 +1,23 @@
+name: Improvement
+description: Make an existing tool faster, clearer, more accessible or more reliable
+labels: [improvement, triage]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool or area
+      placeholder: e.g. Video › Trim, Settings, docs
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What is it like today?
+    validations:
+      required: true
+  - type: textarea
+    id: better
+    attributes:
+      label: What would be better?
+    validations:
+      required: true

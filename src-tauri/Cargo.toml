@@ -5,6 +5,8 @@ description = "Toolbox — a fast, local-first desktop toolkit for everyday file
 authors = ["Toolbox"]
 edition = "2021"
 rust-version = "1.77"
+license = "MIT"
+repository = "https://github.com/Ale-Newport/swapIT"
 
 [lib]
 name = "toolbox_lib"

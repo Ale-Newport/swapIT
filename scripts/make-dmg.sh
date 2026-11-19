@@ -9,10 +9,17 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP="$ROOT/src-tauri/target/release/bundle/macos/Toolbox.app"
+# TOOLBOX_TARGET picks a cross-compiled build, e.g. universal-apple-darwin (used by the release workflow).
+TARGET_DIR="$ROOT/src-tauri/target${TOOLBOX_TARGET:+/$TOOLBOX_TARGET}/release"
+APP="$TARGET_DIR/bundle/macos/Toolbox.app"
 VERSION="$(node -p "require('$ROOT/package.json').version")"
-ARCH="$(uname -m)"
-OUT_DIR="$ROOT/src-tauri/target/release/bundle/dmg"
+case "${TOOLBOX_TARGET:-}" in
+  universal-apple-darwin) ARCH="universal" ;;
+  x86_64-apple-darwin) ARCH="x86_64" ;;
+  aarch64-apple-darwin) ARCH="arm64" ;;
+  *) ARCH="$(uname -m)" ;;
+esac
+OUT_DIR="$TARGET_DIR/bundle/dmg"
 OUT="$OUT_DIR/Toolbox_${VERSION}_${ARCH}.dmg"
 
 if [ ! -d "$APP" ]; then

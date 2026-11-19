@@ -1,0 +1,55 @@
+name: Release
+
+# When a GitHub Release is published, build a universal (Apple Silicon + Intel)
+# Toolbox.dmg and attach it to that release.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and attach the DMG to
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  dmg:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # upload the DMG to the release
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # stable
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - name: Build Toolbox.app (universal)
+        run: npx tauri build --target universal-apple-darwin --bundles app
+      - name: Package DMG
+        run: TOOLBOX_TARGET=universal-apple-darwin bash scripts/make-dmg.sh
+      - name: Checksums
+        working-directory: src-tauri/target/universal-apple-darwin/release/bundle/dmg
+        run: shasum -a 256 *.dmg | tee SHA256SUMS.txt
+      - name: Attach to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" --clobber --repo "$GITHUB_REPOSITORY" \
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg \
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/SHA256SUMS.txt

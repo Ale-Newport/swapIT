@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a new tool or capability
+labels: [enhancement, triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the task, not the solution. "I keep opening a website to …"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like Toolbox to do?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Images, Video, Audio, PDF, QR & barcodes, SVG, Text, Developer, Files, Generators, Date & time, Calculators, Capture & OCR, Clipboard, Radial menu, Something new]
+    validations:
+      required: true
+  - type: checkboxes
+    id: local
+    attributes:
+      label: Fits the project
+      options:
+        - label: This can work fully offline, on the user's Mac, without an account or upload.
+          required: true
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to build it?
+      description: A new tool is one folder with two files — see docs/ADDING_TOOLS.md.
+      options: ["Yes", "Maybe, with guidance", "No"]

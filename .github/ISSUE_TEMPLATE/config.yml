@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/Ale-Newport/swapIT/discussions
+    about: Ask how to do something, share a workflow or float an idea before opening an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/Ale-Newport/swapIT/security/advisories/new
+    about: Please report security problems privately, never in a public issue.

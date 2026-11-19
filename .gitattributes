@@ -1,0 +1,24 @@
+# Normalise line endings in the repository; check out with the platform default.
+* text=auto eol=lf
+
+# Shell scripts must keep LF or they fail on macOS/Linux.
+*.sh text eol=lf
+
+# Lockfiles: treat as generated, keep diffs out of reviews and language stats.
+package-lock.json linguist-generated=true -diff
+src-tauri/Cargo.lock linguist-generated=true -diff
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.heic binary
+*.docx binary
+*.pdf binary
+*.dmg binary
+
+# Generated platform icons are not source.
+src-tauri/icons/** linguist-generated=true
