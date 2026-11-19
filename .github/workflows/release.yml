@@ -45,7 +45,7 @@ jobs:
         run: TOOLBOX_TARGET=universal-apple-darwin bash scripts/make-dmg.sh
       - name: Checksums
         working-directory: src-tauri/target/universal-apple-darwin/release/bundle/dmg
-        run: shasum -a 256 *.dmg | tee SHA256SUMS.txt
+        run: shasum -a 256 -- *.dmg | tee SHA256SUMS.txt
       - name: Attach to release
         env:
           GH_TOKEN: ${{ github.token }}
