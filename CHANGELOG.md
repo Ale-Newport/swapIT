@@ -6,6 +6,34 @@ All notable changes to Toolbox are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-19
+
+### Added
+
+- **Homebrew:** `brew install --cask ale-newport/tap/toolbox` installs the universal
+  app from the new [tap](https://github.com/Ale-Newport/homebrew-tap) and clears the
+  quarantine flag so it opens normally (#4).
+- **Web demo:** tools that need the Mac carry a "Mac app" tag on their cards and in the
+  ⌘K palette, and open with a note and a download link instead of failing on the first
+  file. Saving from a browser tool now downloads the file (#2).
+- **DMG smoke test** workflow: after every release, the DMG is checksummed, installed,
+  checked (universal binary, signature, version) and launched on an Apple Silicon and an
+  Intel runner, and the Homebrew cask is installed the same way (#7).
+
+### Changed
+
+- About Toolbox and Finder's Get Info show the copyright and licence; the crate names
+  its author (#1).
+- The Barcode Generator loads 208 KB of JavaScript instead of 936 KB by bundling only
+  the eight encoders it offers (#6).
+- Installation instructions cover Homebrew and macOS 15, where right-click › Open no
+  longer opens apps that are not notarised.
+- Errors re-thrown by the JSON, YAML, XML, regex and PDF tools keep the original error
+  as their `cause`.
+- Dependencies: ESLint 10, Vitest 5, lucide-react 1, marked 18, jsdom 31 and the npm
+  and Cargo minor/patch groups. js-yaml 5 (#30) and TypeScript 7 (not yet supported by
+  typescript-eslint) are held back.
+
 ## [0.1.0] — 2026-11-19
 
 First public release.
@@ -42,5 +70,6 @@ First public release.
   data URL into *Image from Base64*, or a crafted prologue into *XML Formatter*,
   could hang the tool.
 
-[Unreleased]: https://github.com/Ale-Newport/swapIT/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Ale-Newport/swapIT/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Ale-Newport/swapIT/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Ale-Newport/swapIT/releases/tag/v0.1.0

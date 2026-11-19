@@ -1,6 +1,6 @@
 [package]
 name = "toolbox"
-version = "0.1.0"
+version = "0.2.0"
 description = "Toolbox — a fast, local-first desktop toolkit for everyday file tasks."
 authors = ["Alejandro Newport Diaz"]
 edition = "2021"
