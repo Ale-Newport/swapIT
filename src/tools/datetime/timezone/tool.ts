@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Timezone Converter',
   description: 'Compare one moment across cities and plan meetings',
   category: 'datetime',
+  web: true,
   icon: 'Globe',
   weight: 70,
   standalone: true,

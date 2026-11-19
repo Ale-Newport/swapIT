@@ -5,6 +5,7 @@ export default defineTool({
   name: 'SVG Formatter',
   description: 'Pretty-print SVG markup with the indent you prefer',
   category: 'svg',
+  web: true,
   icon: 'AlignLeft',
   weight: 45,
   standalone: true,

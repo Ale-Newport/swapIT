@@ -5,6 +5,7 @@ export default defineTool({
   name: 'YAML Formatter',
   description: 'Tidy YAML and convert it to or from JSON',
   category: 'text',
+  web: true,
   icon: 'FileCode2',
   weight: 58,
   standalone: true,

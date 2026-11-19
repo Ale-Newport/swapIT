@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Remove Empty Lines',
   description: 'Drop blank lines or collapse runs of them into one',
   category: 'text',
+  web: true,
   icon: 'Rows3',
   weight: 50,
   standalone: true,

@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Word Frequency',
   description: 'Rank the most used words and export the counts',
   category: 'text',
+  web: true,
   icon: 'ChartBarBig',
   weight: 35,
   standalone: true,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RELEASES_URL } from './demoIpc';
+import { RELEASES_URL } from '@/core/platform';
 
 /** A small, dismissible note that this is the browser demo, with the way to the real app. */
 export function DemoBanner() {
@@ -11,8 +11,8 @@ export function DemoBanner() {
       className="fixed bottom-4 left-1/2 z-50 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-3 rounded-full border border-line bg-panel/95 py-1.5 pl-4 pr-1.5 text-[12.5px] text-ink-soft shadow-lg backdrop-blur"
     >
       <span className="min-w-0 truncate">
-        <strong className="font-semibold text-ink">Web demo.</strong> Text, developer, QR, SVG and generator tools run
-        here; file tools need the Mac app.
+        <strong className="font-semibold text-ink">Web demo.</strong> Tools without a “Mac app” tag run right here; the
+        rest work with files on your Mac.
       </span>
       <a
         href={RELEASES_URL}

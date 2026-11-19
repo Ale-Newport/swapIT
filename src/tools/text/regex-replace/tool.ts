@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Regex Replace',
   description: 'Match with a regular expression and rewrite with $1',
   category: 'text',
+  web: true,
   icon: 'Regex',
   weight: 68,
   standalone: true,

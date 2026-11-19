@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Base64 to Image',
   description: 'Decode a Base64 string or data URL back into an image',
   category: 'images',
+  web: true,
   icon: 'ImageDown',
   weight: 38,
   standalone: true,

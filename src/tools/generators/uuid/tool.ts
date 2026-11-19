@@ -5,6 +5,7 @@ export default defineTool({
   name: 'UUID Generator',
   description: 'Make random v4 or time-ordered v7 identifiers',
   category: 'generators',
+  web: true,
   icon: 'Fingerprint',
   weight: 85,
   standalone: true,

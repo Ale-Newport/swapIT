@@ -5,6 +5,7 @@ export default defineTool({
   name: 'JSON ↔ YAML',
   description: 'Convert JSON to YAML and YAML back to JSON',
   category: 'developer',
+  web: true,
   icon: 'ArrowRightLeft',
   weight: 85,
   standalone: true,

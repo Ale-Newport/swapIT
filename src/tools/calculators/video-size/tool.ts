@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Video Size Estimator',
   description: 'Estimate output size from resolution, codec and length',
   category: 'calculators',
+  web: true,
   icon: 'FileVideo',
   weight: 50,
   standalone: true,

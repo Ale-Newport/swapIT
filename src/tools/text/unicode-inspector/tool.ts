@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Unicode Inspector',
   description: 'See every code point, byte and hidden character in a string',
   category: 'text',
+  web: true,
   icon: 'Braces',
   weight: 45,
   standalone: true,

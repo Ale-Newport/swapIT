@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Clipboard History',
   description: 'Keep, search and paste back the last things you copied',
   category: 'clipboard',
+  web: true,
   icon: 'ClipboardList',
   weight: 60,
   standalone: true,

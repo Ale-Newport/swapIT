@@ -5,6 +5,7 @@ export default defineTool({
   name: 'ASCII Table',
   description: 'Every ASCII and Latin-1 code with hex, octal and entities',
   category: 'developer',
+  web: true,
   icon: 'Table',
   weight: 35,
   standalone: true,

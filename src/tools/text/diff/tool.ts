@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Text Diff',
   description: 'Compare two texts and see exactly what changed',
   category: 'text',
+  web: true,
   icon: 'GitCompare',
   weight: 75,
   standalone: true,

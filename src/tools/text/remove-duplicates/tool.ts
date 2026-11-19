@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Remove Duplicate Lines',
   description: 'Keep one copy of each line, or list only the repeats',
   category: 'text',
+  web: true,
   icon: 'ListX',
   weight: 60,
   standalone: true,

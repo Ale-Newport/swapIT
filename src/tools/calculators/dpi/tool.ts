@@ -5,6 +5,7 @@ export default defineTool({
   name: 'DPI / PPI Calculator',
   description: 'Pixels to print size at any DPI, plus screen PPI',
   category: 'calculators',
+  web: true,
   icon: 'ScanLine',
   weight: 45,
   standalone: true,

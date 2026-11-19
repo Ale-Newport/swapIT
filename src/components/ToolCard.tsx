@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { Link } from 'react-router-dom';
+import { runsHere } from '@/core/platform';
 import { usePrefs } from '@/core/prefs';
 import type { ToolDefinition } from '@/core/types';
 import { Icon } from '@/components/ui';
@@ -25,7 +26,17 @@ export function ToolCard({ tool, compact }: { tool: ToolDefinition; compact?: bo
         <Icon name={tool.icon} size={compact ? 14 : 15} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate pr-5 text-[13px] font-medium text-ink">{tool.name}</span>
+        <span className="flex min-w-0 items-center gap-1.5 pr-5">
+          <span className="truncate text-[13px] font-medium text-ink">{tool.name}</span>
+          {!runsHere(tool) && (
+            <span
+              className="shrink-0 rounded-full border border-line px-1.5 text-[10px] font-medium leading-[16px] text-ink-faint"
+              title="Works with files on your Mac — needs the desktop app"
+            >
+              Mac app
+            </span>
+          )}
+        </span>
         <span className="mt-0.5 block line-clamp-2 text-[11.5px] leading-[1.45] text-ink-faint">
           {tool.description}
         </span>

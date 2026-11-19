@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Character Counter',
   description: 'Count characters, words, lines and reading time',
   category: 'text',
+  web: true,
   icon: 'Hash',
   weight: 80,
   standalone: true,

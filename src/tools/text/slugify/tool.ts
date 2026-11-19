@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Slugify Text',
   description: 'Turn titles into clean URL slugs, one per line',
   category: 'text',
+  web: true,
   icon: 'Link2',
   weight: 40,
   standalone: true,

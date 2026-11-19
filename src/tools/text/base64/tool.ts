@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Base64 Encode / Decode',
   description: 'Convert text to base64 and back, UTF-8 safe',
   category: 'text',
+  web: true,
   icon: 'Binary',
   weight: 72,
   standalone: true,

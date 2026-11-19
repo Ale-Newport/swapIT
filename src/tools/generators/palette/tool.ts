@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Palette Generator',
   description: 'Build a colour scheme from one base colour',
   category: 'generators',
+  web: true,
   icon: 'Palette',
   weight: 60,
   standalone: true,

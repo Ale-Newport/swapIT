@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Markdown Preview',
   description: 'Write Markdown and see it rendered as you type',
   category: 'text',
+  web: true,
   icon: 'FileText',
   weight: 66,
   standalone: true,

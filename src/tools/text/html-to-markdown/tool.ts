@@ -5,6 +5,7 @@ export default defineTool({
   name: 'HTML to Markdown',
   description: 'Turn web page HTML into clean Markdown',
   category: 'text',
+  web: true,
   icon: 'ArrowRightLeft',
   weight: 55,
   standalone: true,

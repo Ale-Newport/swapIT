@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Sort Lines',
   description: 'Sort lines alphabetically, numerically or by length',
   category: 'text',
+  web: true,
   icon: 'ArrowDownAZ',
   weight: 65,
   standalone: true,

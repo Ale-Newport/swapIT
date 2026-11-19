@@ -5,6 +5,7 @@ export default defineTool({
   name: 'URL Parser',
   description: 'Break a URL into its parts and rebuild it live',
   category: 'developer',
+  web: true,
   icon: 'Link',
   weight: 65,
   standalone: true,

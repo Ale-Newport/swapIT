@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Storage Converter',
   description: 'How many photos, songs and videos fit on a drive',
   category: 'calculators',
+  web: true,
   icon: 'Database',
   weight: 35,
   standalone: true,

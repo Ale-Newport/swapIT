@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Image Size Calculator',
   description: 'Megapixels, raw size and compressed estimates',
   category: 'calculators',
+  web: true,
   icon: 'Image',
   weight: 42,
   standalone: true,

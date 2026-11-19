@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Regex Tester',
   description: 'Test a regular expression live with matches and groups',
   category: 'developer',
+  web: true,
   icon: 'Regex',
   weight: 78,
   standalone: true,

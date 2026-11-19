@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Human Readable Duration',
   description: 'Turn seconds into words and read durations back',
   category: 'datetime',
+  web: true,
   icon: 'Timer',
   weight: 50,
   standalone: true,

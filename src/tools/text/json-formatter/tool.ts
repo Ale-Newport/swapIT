@@ -5,6 +5,7 @@ export default defineTool({
   name: 'JSON Formatter',
   description: 'Pretty-print, minify and validate JSON',
   category: 'text',
+  web: true,
   icon: 'Braces',
   weight: 90,
   standalone: true,

@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Fake Test Data',
   description: 'Fictional people for testing, as JSON, CSV or SQL',
   category: 'generators',
+  web: true,
   icon: 'UserRoundPlus',
   weight: 48,
   standalone: true,

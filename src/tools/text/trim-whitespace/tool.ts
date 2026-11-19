@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Trim Whitespace',
   description: 'Trim, collapse and clean invisible characters out of text',
   category: 'text',
+  web: true,
   icon: 'Eraser',
   weight: 48,
   standalone: true,

@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Password Generator',
   description: 'Strong random passwords and passphrases, with entropy',
   category: 'generators',
+  web: true,
   icon: 'KeyRound',
   weight: 90,
   standalone: true,

@@ -5,6 +5,7 @@ export default defineTool({
   name: 'ISO 8601 Converter',
   description: 'Read and write ISO dates, weeks, durations and intervals',
   category: 'datetime',
+  web: true,
   icon: 'CalendarCheck',
   weight: 45,
   standalone: true,

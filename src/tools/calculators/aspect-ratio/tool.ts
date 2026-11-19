@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Aspect Ratio Calculator',
   description: 'Solve width, height and ratio, and fit inside a box',
   category: 'calculators',
+  web: true,
   icon: 'RectangleHorizontal',
   weight: 70,
   standalone: true,

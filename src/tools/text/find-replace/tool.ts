@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Find and Replace',
   description: 'Replace text everywhere, with a highlighted preview',
   category: 'text',
+  web: true,
   icon: 'Replace',
   weight: 70,
   standalone: true,

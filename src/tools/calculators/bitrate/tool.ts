@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Bitrate Calculator',
   description: 'Solve bitrate, duration or file size from the other two',
   category: 'calculators',
+  web: true,
   icon: 'Gauge',
   weight: 55,
   standalone: true,

@@ -5,6 +5,7 @@ export default defineTool({
   name: 'JSON Validator',
   description: 'Check JSON and explain exactly where it breaks',
   category: 'text',
+  web: true,
   icon: 'CircleCheckBig',
   weight: 70,
   standalone: true,

@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Random Name',
   description: 'Names for placeholders, plus project codenames',
   category: 'generators',
+  web: true,
   icon: 'UserRound',
   weight: 35,
   standalone: true,

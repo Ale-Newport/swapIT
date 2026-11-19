@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Unix Timestamp Converter',
   description: 'Turn epoch numbers into dates and back, live',
   category: 'datetime',
+  web: true,
   icon: 'Clock',
   weight: 85,
   standalone: true,

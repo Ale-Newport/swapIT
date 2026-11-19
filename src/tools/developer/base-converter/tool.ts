@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Number Base Converter',
   description: 'Convert between binary, octal, decimal, hex and any base',
   category: 'developer',
+  web: true,
   icon: 'Binary',
   weight: 58,
   standalone: true,

@@ -5,6 +5,7 @@ export default defineTool({
   name: 'JSON ↔ XML',
   description: 'Convert JSON to XML and XML documents back to JSON',
   category: 'developer',
+  web: true,
   icon: 'FileCode2',
   weight: 70,
   standalone: true,

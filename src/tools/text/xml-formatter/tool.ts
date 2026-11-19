@@ -5,6 +5,7 @@ export default defineTool({
   name: 'XML Formatter',
   description: 'Pretty-print, minify and check XML',
   category: 'text',
+  web: true,
   icon: 'Code2',
   weight: 60,
   standalone: true,

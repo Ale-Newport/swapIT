@@ -5,6 +5,7 @@ export default defineTool({
   name: 'HTTP Status Codes',
   description: 'Search every HTTP status code and what it means',
   category: 'developer',
+  web: true,
   icon: 'ServerCog',
   weight: 45,
   standalone: true,

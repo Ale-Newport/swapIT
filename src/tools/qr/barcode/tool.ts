@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Barcode Generator',
   description: 'Create Code 128, EAN, UPC, ITF and Data Matrix codes',
   category: 'qr',
+  web: true,
   icon: 'Barcode',
   weight: 60,
   standalone: true,

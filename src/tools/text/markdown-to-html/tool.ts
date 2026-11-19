@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Markdown to HTML',
   description: 'Render Markdown as HTML or a complete web page',
   category: 'text',
+  web: true,
   icon: 'CodeXml',
   weight: 54,
   standalone: true,

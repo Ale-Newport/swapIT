@@ -122,3 +122,35 @@ describe('file matching', () => {
     }
   });
 });
+
+/**
+ * `web: true` puts a tool in the browser demo. A tool that reads files from disk or
+ * runs a job in the backend cannot work there, so the flag must never be set on one.
+ */
+describe('web demo availability', () => {
+  const sources = import.meta.glob(['/src/tools/**/*.ts', '/src/tools/**/*.tsx', '!/src/tools/**/*.test.*'], {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }) as Record<string, string>;
+  const sourceOf = (id: string) =>
+    Object.entries(sources)
+      .filter(([file]) => file.startsWith(`/src/tools/${id}/`))
+      .map(([, text]) => text)
+      .join('\n');
+
+  it('only marks tools that need no files or backend jobs as web', () => {
+    for (const tool of allTools().filter((t) => t.web)) {
+      const src = sourceOf(tool.id);
+      expect(src.length, `${tool.id} sources not found`).toBeGreaterThan(0);
+      expect(/useToolFiles|useToolRun/.test(src), `${tool.id} reads files or runs a backend job, so it cannot be web`).toBe(false);
+      expect(tool.requires ?? [], `${tool.id} needs external programs, so it cannot be web`).toEqual([]);
+    }
+  });
+
+  it('keeps a useful set of tools in the web demo', () => {
+    const web = allTools().filter((t) => t.web).map((t) => t.id);
+    expect(web.length).toBeGreaterThanOrEqual(60);
+    expect(web).toEqual(expect.arrayContaining(['qr/generate', 'developer/json-yaml', 'text/markdown-preview']));
+  });
+});

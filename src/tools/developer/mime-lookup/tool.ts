@@ -5,6 +5,7 @@ export default defineTool({
   name: 'MIME Type Lookup',
   description: 'Find the MIME type for a file extension, or the reverse',
   category: 'developer',
+  web: true,
   icon: 'FileQuestion',
   weight: 44,
   standalone: true,

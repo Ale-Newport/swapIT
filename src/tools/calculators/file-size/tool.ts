@@ -5,6 +5,7 @@ export default defineTool({
   name: 'File Size Converter',
   description: 'Convert bytes, KB, MB, GB and KiB, MiB, GiB',
   category: 'calculators',
+  web: true,
   icon: 'HardDrive',
   weight: 40,
   standalone: true,

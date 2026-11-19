@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Color Converter',
   description: 'Convert HEX, RGB, HSL, HSV and CMYK with contrast checks',
   category: 'developer',
+  web: true,
   icon: 'Palette',
   weight: 68,
   standalone: true,

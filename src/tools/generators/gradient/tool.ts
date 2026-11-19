@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Gradient Generator',
   description: 'Design a CSS gradient and export it as PNG or SVG',
   category: 'generators',
+  web: true,
   icon: 'Blend',
   weight: 45,
   standalone: true,

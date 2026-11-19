@@ -5,6 +5,7 @@ export default defineTool({
   name: 'JWT Decoder',
   description: 'Read the header, claims and expiry of a JSON web token',
   category: 'developer',
+  web: true,
   icon: 'KeyRound',
   weight: 88,
   standalone: true,

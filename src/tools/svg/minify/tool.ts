@@ -5,6 +5,7 @@ export default defineTool({
   name: 'SVG Minifier',
   description: 'Squeeze SVG markup down to the smallest safe single line',
   category: 'svg',
+  web: true,
   icon: 'Minimize2',
   weight: 44,
   standalone: true,

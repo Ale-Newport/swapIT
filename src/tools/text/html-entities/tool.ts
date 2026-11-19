@@ -5,6 +5,7 @@ export default defineTool({
   name: 'HTML Entities',
   description: 'Escape and unescape HTML entities, named or numeric',
   category: 'text',
+  web: true,
   icon: 'Code',
   weight: 55,
   standalone: true,

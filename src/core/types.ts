@@ -81,6 +81,12 @@ export interface ToolDefinition {
   hidden?: boolean;
   /** True when the tool needs no files at all (generators, calculators). */
   standalone?: boolean;
+  /**
+   * True when the tool does its whole job in TypeScript, with no files from disk
+   * and no native command — it then runs in the web demo too. Leave it out for
+   * anything that reads files, spawns a program or touches the system.
+   */
+  web?: boolean;
   load: () => Promise<{ default: ComponentType }>;
 }
 

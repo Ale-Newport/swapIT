@@ -5,6 +5,7 @@ export default defineTool({
   name: 'JSON ↔ CSV',
   description: 'Convert JSON records to CSV and CSV rows back to JSON',
   category: 'developer',
+  web: true,
   icon: 'Table2',
   weight: 80,
   standalone: true,

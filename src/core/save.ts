@@ -1,7 +1,39 @@
 import { save as saveDialog } from '@tauri-apps/plugin-dialog';
 import { readFile, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { call, planOutput } from './bridge';
+import { WEB_DEMO } from './platform';
 import type { FileResult, OutputSpec } from './types';
+
+const toBytes = async (data: Uint8Array | ArrayBuffer | Blob): Promise<Uint8Array> =>
+  data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+
+/** A file name without any folder part, safe to offer as a download name. */
+export function downloadName(name: string): string {
+  const base = name.split(/[\\/]/).pop()?.trim() ?? '';
+  return [...base].filter((c) => c.charCodeAt(0) >= 32).join('') || 'toolbox-output';
+}
+
+/**
+ * The web demo has no file system: hand the bytes to the browser as a download
+ * and report it the way a saved file is reported.
+ */
+function browserDownload(bytes: Uint8Array, name: string): FileResult {
+  const fileName = downloadName(name);
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  return { path: fileName, name: fileName, size: bytes.byteLength, source: null, sourceSize: null, disposition: 'created', note: 'Downloaded by your browser' };
+}
+
+function webName(options: { output: OutputSpec; ext: string }): string {
+  const stem = options.output.filename?.trim() || 'toolbox-output';
+  return stem.toLowerCase().endsWith(`.${options.ext}`) ? stem : `${stem}.${options.ext}`;
+}
 
 /**
  * Save bytes produced in the frontend (PDF, QR, SVG …) through the same output
@@ -12,12 +44,8 @@ export async function saveBytes(
   data: Uint8Array | ArrayBuffer | Blob,
   options: { source: string | null; output: OutputSpec; ext: string },
 ): Promise<FileResult> {
-  const bytes =
-    data instanceof Blob
-      ? new Uint8Array(await data.arrayBuffer())
-      : data instanceof ArrayBuffer
-        ? new Uint8Array(data)
-        : data;
+  const bytes = await toBytes(data);
+  if (WEB_DEMO) return browserDownload(bytes, webName(options));
   const planned = await planOutput(options.source, options.output, options.ext);
   // "skip" means the file already exists and must be left alone — `planned.path`
   // is that existing file, so writing here would destroy it.
@@ -47,6 +75,7 @@ export async function saveText(
   text: string,
   options: { source: string | null; output: OutputSpec; ext: string },
 ): Promise<FileResult> {
+  if (WEB_DEMO) return browserDownload(new TextEncoder().encode(text), webName(options));
   const planned = await planOutput(options.source, options.output, options.ext);
   if (planned.disposition === 'skipped') {
     return {
@@ -80,9 +109,10 @@ export async function saveAs(
   data: Uint8Array | Blob,
   defaultName: string,
 ): Promise<FileResult | null> {
+  if (WEB_DEMO) return browserDownload(await toBytes(data), defaultName);
   const target = await saveDialog({ defaultPath: defaultName });
   if (!target) return null;
-  const bytes = data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : data;
+  const bytes = await toBytes(data);
   await writeFile(target, bytes);
   return {
     path: target,
@@ -95,6 +125,7 @@ export async function saveAs(
 }
 
 export async function saveTextAs(text: string, defaultName: string): Promise<FileResult | null> {
+  if (WEB_DEMO) return browserDownload(new TextEncoder().encode(text), defaultName);
   const target = await saveDialog({ defaultPath: defaultName });
   if (!target) return null;
   await writeTextFile(target, text);

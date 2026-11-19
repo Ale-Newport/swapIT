@@ -5,6 +5,7 @@ export default defineTool({
   name: 'URL Encode / Decode',
   description: 'Percent-encode or decode URLs, query values and form fields',
   category: 'text',
+  web: true,
   icon: 'Link',
   weight: 65,
   standalone: true,

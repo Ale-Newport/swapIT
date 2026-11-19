@@ -5,6 +5,7 @@ export default defineTool({
   name: 'QR Code Generator',
   description: 'Make QR codes for links, Wi-Fi, contacts and more',
   category: 'qr',
+  web: true,
   icon: 'QrCode',
   weight: 100,
   standalone: true,

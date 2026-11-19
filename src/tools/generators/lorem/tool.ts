@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Lorem Ipsum',
   description: 'Placeholder copy in Latin or plain English',
   category: 'generators',
+  web: true,
   icon: 'Text',
   weight: 55,
   standalone: true,

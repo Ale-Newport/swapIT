@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Percentage Calculator',
   description: 'Percent of, change, increase, decrease and reverse',
   category: 'calculators',
+  web: true,
   icon: 'Percent',
   weight: 60,
   standalone: true,

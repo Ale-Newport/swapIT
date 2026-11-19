@@ -5,6 +5,7 @@ export default defineTool({
   name: 'String Escape',
   description: 'Escape or unescape text for JSON, JS, SQL, shell, CSV and XML',
   category: 'developer',
+  web: true,
   icon: 'Quote',
   weight: 50,
   standalone: true,

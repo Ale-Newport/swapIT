@@ -9,9 +9,8 @@
  * calculators, date and time — run here exactly as they do in the app.
  */
 import { mockConvertFileSrc, mockIPC } from '@tauri-apps/api/mocks';
+import { RELEASES_URL } from '@/core/platform';
 import type { ToolboxError } from '@/core/types';
-
-export const RELEASES_URL = 'https://github.com/Ale-Newport/swapIT/releases/latest';
 
 const settings: Record<string, unknown> = {
   binaries: {},

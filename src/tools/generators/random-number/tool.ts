@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Random Number',
   description: 'Pick numbers in a range, or roll dice like 3d6+2',
   category: 'generators',
+  web: true,
   icon: 'Dices',
   weight: 50,
   standalone: true,

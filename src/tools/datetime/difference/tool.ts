@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Date Difference',
   description: 'Count years, days and working days between two dates',
   category: 'datetime',
+  web: true,
   icon: 'CalendarRange',
   weight: 65,
   standalone: true,

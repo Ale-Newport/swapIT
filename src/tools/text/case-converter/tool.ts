@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Case Converter',
   description: 'Switch text between 13 capitalisation styles',
   category: 'text',
+  web: true,
   icon: 'CaseSensitive',
   weight: 90,
   standalone: true,

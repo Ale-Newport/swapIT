@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Query String Parser',
   description: 'Split a query string into parameters and build it back',
   category: 'developer',
+  web: true,
   icon: 'ListTree',
   weight: 55,
   standalone: true,

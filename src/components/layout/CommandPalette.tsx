@@ -6,6 +6,7 @@ import { usePrefs, popularToolIds } from '@/core/prefs';
 import { getTool, searchTools, visibleTools } from '@/core/registry';
 import type { ToolDefinition } from '@/core/types';
 import { Icon, Kbd } from '@/components/ui';
+import { runsHere } from '@/core/platform';
 import { isTauri, radialShow } from '@/radial/native';
 
 interface Item {
@@ -40,7 +41,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     const toItem = (tool: ToolDefinition, section: string): Item => ({
       id: tool.id,
       label: tool.name,
-      hint: tool.description,
+      hint: runsHere(tool) ? tool.description : `${tool.description} · Mac app`,
       icon: tool.icon,
       section,
       run: () => navigate(`/t/${tool.id}`),

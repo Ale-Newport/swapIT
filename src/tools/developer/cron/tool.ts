@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Cron Expression Helper',
   description: 'Explain a cron schedule and preview its next runs',
   category: 'developer',
+  web: true,
   icon: 'CalendarClock',
   weight: 60,
   standalone: true,

@@ -1,10 +1,11 @@
 import { Suspense, lazy, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { categoryName } from '@/core/categories';
+import { RELEASES_URL, runsHere } from '@/core/platform';
 import { usePrefs } from '@/core/prefs';
 import { getTool } from '@/core/registry';
 import { DependencyGate } from '@/components/tool';
-import { Badge, Button, EmptyState, Icon, IconButton, Kbd, Spinner } from '@/components/ui';
+import { Alert, Badge, Button, EmptyState, Icon, IconButton, Kbd, Spinner } from '@/components/ui';
 
 /** Files handed over from the Home quick actions, consumed by the tool's file hook. */
 export interface ToolNavigationState {
@@ -91,7 +92,29 @@ export function ToolPage() {
         </div>
       </header>
 
-      <DependencyGate requires={tool.requires}>
+      {!runsHere(tool) && (
+        <Alert
+          tone="info"
+          title="This tool runs in the Mac app"
+          className="mb-4"
+          action={
+            <a
+              href={RELEASES_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-md bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:opacity-90"
+            >
+              Download for macOS
+            </a>
+          }
+        >
+          It works with files on your Mac{tool.requires?.length ? ` using ${tool.requires.join(', ')}` : ''}, which a
+          browser cannot reach. You can look around below; to use it, install Toolbox — it is free and nothing is
+          uploaded.
+        </Alert>
+      )}
+
+      <DependencyGate requires={runsHere(tool) ? tool.requires : undefined}>
         <Suspense
           fallback={
             <div className="flex items-center gap-2 py-16 text-[12.5px] text-ink-faint">

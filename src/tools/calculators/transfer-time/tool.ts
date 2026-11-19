@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Transfer Time Calculator',
   description: 'How long a download or copy takes at a given speed',
   category: 'calculators',
+  web: true,
   icon: 'ArrowDownUp',
   weight: 38,
   standalone: true,

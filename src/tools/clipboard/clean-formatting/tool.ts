@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Paste Without Formatting',
   description: 'Strip smart quotes, odd spaces and stray line breaks',
   category: 'clipboard',
+  web: true,
   icon: 'ClipboardPaste',
   weight: 50,
   standalone: true,

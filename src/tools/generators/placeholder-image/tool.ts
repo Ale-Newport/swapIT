@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Placeholder Image',
   description: 'Make a sized placeholder PNG without going online',
   category: 'generators',
+  web: true,
   icon: 'ImagePlus',
   weight: 42,
   standalone: true,

@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Random Color',
   description: 'Random swatches — pastel, vivid, dark or by hue',
   category: 'generators',
+  web: true,
   icon: 'Shuffle',
   weight: 40,
   standalone: true,

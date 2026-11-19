@@ -5,6 +5,7 @@ export default defineTool({
   name: 'Add or Subtract Time',
   description: 'Move a date forward or back by any amount of time',
   category: 'datetime',
+  web: true,
   icon: 'CalendarPlus',
   weight: 55,
   standalone: true,
