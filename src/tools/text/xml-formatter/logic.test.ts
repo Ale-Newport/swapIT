@@ -115,3 +115,17 @@ describe('countElements', () => {
     expect(countElements('<?xml version="1.0"?><!-- c --><a/>')).toBe(1);
   });
 });
+
+describe('formatXml on hostile prologues', () => {
+  it('fails fast on a long run of processing instructions with no DOCTYPE', () => {
+    const hostile = '<?a?>'.repeat(4000) + '<?unterminated';
+    const started = performance.now();
+    expect(() => formatXml(hostile, opts())).toThrow();
+    expect(performance.now() - started).toBeLessThan(1500);
+  });
+
+  it('still keeps a DOCTYPE after comments and processing instructions', () => {
+    const out = formatXml('<?xml version="1.0"?><!-- a -- b --><!DOCTYPE note SYSTEM "n.dtd"><note/>', opts());
+    expect(out).toContain('<!DOCTYPE note SYSTEM "n.dtd">');
+  });
+});
