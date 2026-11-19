@@ -3,10 +3,25 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Toolbox \u2014 a fast, local-first desktop toolkit for everyday file tasks.",
+  "description": "Toolbox — a fast, local-first desktop toolkit for everyday file tasks.",
+  "license": "MIT",
+  "author": "Alejandro Newport Diaz",
+  "homepage": "https://ale-newport.github.io/swapIT/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ale-Newport/swapIT.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ale-Newport/swapIT/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:web": "tsc --noEmit && VITE_WEB_DEMO=true vite build --base ./ --outDir dist-web",
+    "preview:web": "vite preview --outDir dist-web --port 4317 --strictPort",
     "preview": "vite preview",
     "tauri": "tauri",
     "typecheck": "tsc --noEmit",

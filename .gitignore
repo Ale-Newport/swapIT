@@ -12,3 +12,24 @@ coverage
 
 # Build output
 /dist
+dist-web
+
+# Web demo build (GitHub Pages)
+dist-web
+
+# Local secrets and signing material — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+
+# Local tooling
+.claude/
+.idea/
+*.swp

@@ -10,6 +10,9 @@ document.addEventListener('contextmenu', (e) => {
   if (!target.closest('input, textarea, [contenteditable], .selectable')) e.preventDefault();
 });
 
+/** The GitHub Pages build: the app in a browser, with the native backend mocked (src/web). */
+const WEB_DEMO = import.meta.env.VITE_WEB_DEMO === 'true';
+
 const root = ReactDOM.createRoot(document.getElementById('root')!);
 
 /**
@@ -19,7 +22,7 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
  */
 async function boot(): Promise<void> {
   if (currentWindowLabel() === 'radial') {
-    const mod = import.meta.env.DEV && /radial-demo/.test(window.location.hash)
+    const mod = (import.meta.env.DEV || WEB_DEMO) && /radial-demo/.test(window.location.hash)
       ? await import('./radial/dev/Demo')
       : await import('./radial/RadialApp');
     const Overlay = mod.default;
@@ -30,11 +33,14 @@ async function boot(): Promise<void> {
     );
     return;
   }
+  if (WEB_DEMO) await import('./web/demoIpc');
   const { default: App } = await import('./App');
+  const Banner = WEB_DEMO ? (await import('./web/DemoBanner')).DemoBanner : null;
   root.render(
     <React.StrictMode>
       <HashRouter>
         <App />
+        {Banner && <Banner />}
       </HashRouter>
     </React.StrictMode>,
   );
