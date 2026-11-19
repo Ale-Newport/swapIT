@@ -137,6 +137,7 @@ export function prepare(text: string, format: ClipFormat, options: PrepareOption
       const detail = err instanceof Error ? err.message : String(err);
       throw new Error(
         `The clipboard is not valid JSON, so it cannot be saved as a .json file (${detail}). Save it as plain text instead, or fix the JSON and copy it again.`,
+        { cause: err },
       );
     }
     return `${JSON.stringify(parsed, null, Math.max(0, Math.min(8, options.indent)))}\n`;

@@ -37,9 +37,9 @@ async function loadPdf(path: string, name: string): Promise<PDFDocument> {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (/encrypt/i.test(message)) {
-      throw new Error(`“${name}” is password protected. Unlock it with the Decrypt PDF tool first.`);
+      throw new Error(`“${name}” is password protected. Unlock it with the Decrypt PDF tool first.`, { cause: err });
     }
-    throw new Error(`“${name}” could not be opened — it may be damaged or not a real PDF.`);
+    throw new Error(`“${name}” could not be opened — it may be damaged or not a real PDF.`, { cause: err });
   }
 }
 

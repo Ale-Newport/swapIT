@@ -53,7 +53,7 @@ function tryParse(text: string): ParseAttempt {
  * text for JSONC. Its offsets and line breaks match the original either way.
  */
 function validReport(input: string, scanned: string, value: unknown, jsonc: string | null): Report {
-  let duplicates: DuplicateKey[] = [];
+  let duplicates: DuplicateKey[];
   try {
     duplicates = findDuplicateKeys(scanned);
   } catch {

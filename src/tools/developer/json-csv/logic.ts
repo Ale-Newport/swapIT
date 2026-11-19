@@ -130,7 +130,7 @@ export function jsonToCsv(text: string, options: CsvOptions): { output: string; 
   try {
     parsed = JSON.parse(text) as unknown;
   } catch (err) {
-    throw new Error(`That is not valid JSON. ${jsonErrorMessage(text, err)}`);
+    throw new Error(`That is not valid JSON. ${jsonErrorMessage(text, err)}`, { cause: err });
   }
   const rows = toRows(parsed);
   const columns = collectColumns(rows);

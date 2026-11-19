@@ -81,7 +81,7 @@ export function jsonToXml(text: string, options: XmlOptions): { output: string; 
   try {
     parsed = JSON.parse(text) as unknown;
   } catch (err) {
-    throw new Error(`That is not valid JSON. ${jsonErrorMessage(text, err)}`);
+    throw new Error(`That is not valid JSON. ${jsonErrorMessage(text, err)}`, { cause: err });
   }
   const document = prepareRoot(parsed, options.rootName);
   const builder = new XMLBuilder({
@@ -96,7 +96,7 @@ export function jsonToXml(text: string, options: XmlOptions): { output: string; 
   try {
     body = builder.build(document) as string;
   } catch (err) {
-    throw new Error(`This JSON could not be written as XML. ${err instanceof Error ? err.message : String(err)}`);
+    throw new Error(`This JSON could not be written as XML. ${err instanceof Error ? err.message : String(err)}`, { cause: err });
   }
   const output = options.declaration ? `<?xml version="1.0" encoding="UTF-8"?>\n${body}` : body;
   return { output: output.replace(/\n+$/, '\n'), rootName: Object.keys(document)[0] };

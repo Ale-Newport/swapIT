@@ -24,6 +24,7 @@ export function buildRegex(pattern: string, flags: string): RegExp {
     const detail = err instanceof Error ? err.message.replace(/^Invalid regular expression:?\s*/i, '') : String(err);
     throw new Error(
       `That pattern is not valid regular expression syntax (${detail}). Check for an unbalanced bracket, a stray backslash, or a flag the pattern does not allow.`,
+      { cause: err },
     );
   }
 }

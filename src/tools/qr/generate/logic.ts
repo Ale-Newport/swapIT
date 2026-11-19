@@ -380,9 +380,10 @@ export function buildMatrix(text: string, errorCorrection: ErrorCorrection): boo
     if (/too big|big to be stored|data too long/i.test(message)) {
       throw new Error(
         `That content is too long for a single QR code at error correction ${errorCorrection}. Shorten it, or drop to a lower level such as L.`,
+        { cause: err },
       );
     }
-    throw new Error(`This content could not be encoded as a QR code. ${message}`);
+    throw new Error(`This content could not be encoded as a QR code. ${message}`, { cause: err });
   }
   const { size, data } = qr.modules;
   const bits: boolean[][] = [];

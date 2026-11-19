@@ -525,10 +525,11 @@ export function parseIsoInterval(input: string): IsoIntervalResult {
   const left = parseIntervalPart(pieces[0]);
   const right = parseIntervalPart(pieces[1]);
 
-  let start: Date | null = null;
-  let end: Date | null = null;
+  // Every branch below assigns these or throws, so they start unassigned.
+  let start: Date;
+  let end: Date;
   let duration: IsoDuration | null = null;
-  let form = '';
+  let form: string;
 
   if (left.date && right.date) {
     start = left.date;

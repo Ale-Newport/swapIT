@@ -46,7 +46,7 @@ export function compileRegex(pattern: string, flags: string): RegExp {
     const raw = err instanceof Error ? err.message : String(err);
     // "Invalid regular expression: /a(/: Unterminated group" → "Unterminated group"
     const detail = raw.includes('/: ') ? raw.slice(raw.lastIndexOf('/: ') + 3) : raw;
-    throw new Error(`This pattern is not valid: ${detail.charAt(0).toUpperCase()}${detail.slice(1)}.`);
+    throw new Error(`This pattern is not valid: ${detail.charAt(0).toUpperCase()}${detail.slice(1)}.`, { cause: err });
   }
 }
 

@@ -117,6 +117,7 @@ export function htmlToMarkdown(html: string, opts: HtmlToMarkdownOptions): strin
   } catch (err) {
     throw new Error(
       `This HTML could not be converted: ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
   // Trim blank lines only — an indented code block at the very top keeps its

@@ -136,7 +136,7 @@ export function resolveNamed(name: string): string | null {
   if (typeof DOMParser === 'undefined') return null;
   if (domCache.has(name)) return domCache.get(name) ?? null;
   const source = `&${name};`;
-  let resolved: string | null = null;
+  let resolved: string | null;
   try {
     const doc = new DOMParser().parseFromString(source, 'text/html');
     const text = doc.documentElement.textContent ?? '';

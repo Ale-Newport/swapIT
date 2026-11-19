@@ -139,6 +139,7 @@ export function markdownToHtml(markdown: string, opts: MarkdownToHtmlOptions): s
   } catch (err) {
     throw new Error(
       `This Markdown could not be converted: ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 

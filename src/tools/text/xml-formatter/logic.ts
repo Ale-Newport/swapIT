@@ -214,7 +214,7 @@ export function formatXml(input: string, opts: XmlFormatOptions): string {
   try {
     tree = parser.parse(text);
   } catch (err) {
-    throw new Error(`This XML could not be read: ${err instanceof Error ? err.message : String(err)}`);
+    throw new Error(`This XML could not be read: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
   }
 
   const nodes = ((Array.isArray(tree) ? tree : []) as OrderedNode[]).filter((node) => !isWhitespaceText(node));

@@ -242,6 +242,7 @@ export function convertYaml(input: string, opts: YamlOptions): YamlResult {
     } catch (err) {
       throw new Error(
         `This document cannot be written as JSON: ${err instanceof Error ? err.message : String(err)}`,
+        { cause: err },
       );
     }
     if (documents.length > 1) {

@@ -109,7 +109,7 @@ export interface DecodeResult {
 
 export function decodeInput(input: string): DecodeResult {
   const bytes = decodeToBytes(input);
-  let text: string | null = null;
+  let text: string | null;
   try {
     text = bytesToText(bytes);
   } catch {

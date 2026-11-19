@@ -92,6 +92,7 @@ export function minifySvg(source: string, opts: MinifyOptions): MinifyResult {
     const detail = err instanceof Error ? err.message : String(err);
     throw new Error(
       `This is not valid SVG markup, so it could not be minified. Open it in the SVG Viewer to see what is wrong. (${detail})`,
+      { cause: err },
     );
   }
   const before = byteLength(source);

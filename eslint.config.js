@@ -15,7 +15,11 @@ export default tseslint.config(
     },
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // The two classic Hooks rules. eslint-plugin-react-hooks 7 also ships React Compiler
+      // rules (set-state-in-effect, refs, immutability, purity…); adopting those means
+      // reworking ~170 effects, tracked separately rather than switched on wholesale.
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
       'react-refresh/only-export-components': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'off',

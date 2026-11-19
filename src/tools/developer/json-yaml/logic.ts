@@ -148,7 +148,7 @@ export function jsonToYaml(text: string, options: ConvertOptions): string {
   try {
     parsed = JSON.parse(text) as unknown;
   } catch (err) {
-    throw new Error(`That is not valid JSON. ${describeJsonError(text, err)}`);
+    throw new Error(`That is not valid JSON. ${describeJsonError(text, err)}`, { cause: err });
   }
   try {
     return dump(options.sortKeys ? sortDeep(parsed) : parsed, {
@@ -160,7 +160,7 @@ export function jsonToYaml(text: string, options: ConvertOptions): string {
       lineWidth: -1,
     });
   } catch (err) {
-    throw new Error(`The JSON parsed but could not be written as YAML. ${describeYamlError(err)}`);
+    throw new Error(`The JSON parsed but could not be written as YAML. ${describeYamlError(err)}`, { cause: err });
   }
 }
 
@@ -169,7 +169,7 @@ export function yamlToJson(text: string, options: ConvertOptions): { output: str
   try {
     parsed = load(text) as unknown;
   } catch (err) {
-    throw new Error(`That is not valid YAML. ${describeYamlError(err)}`);
+    throw new Error(`That is not valid YAML. ${describeYamlError(err)}`, { cause: err });
   }
   if (parsed === undefined || isBlankYaml(text)) {
     throw new Error('That YAML document is empty, so there is nothing to convert.');
