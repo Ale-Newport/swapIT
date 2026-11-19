@@ -51,7 +51,7 @@
     "category": "Utility",
     "shortDescription": "Local toolkit for everyday file tasks",
     "longDescription": "Toolbox is a fast, local-first collection of small utilities for files, images, video, audio, PDFs, QR codes, SVG, text and development tasks.",
-    "copyright": "",
+    "copyright": "© 2026 Alejandro Newport Diaz. Released under the MIT License.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
