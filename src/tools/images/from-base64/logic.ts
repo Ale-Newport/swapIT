@@ -104,7 +104,9 @@ export function decodeImageData(input: string): DecodedImage {
   const text = input.trim();
   if (!text) throw new Error('There is nothing to decode — paste a Base64 string or a data URL first.');
 
-  const dataUrl = /^data:([^;,]*)((?:;[^,]*)*),(.*)$/s.exec(text);
+  // Parameters are `;`-separated and cannot contain `;` or `,` themselves, so the
+  // pattern has exactly one way to match (no catastrophic backtracking on `data:;;;;…`).
+  const dataUrl = /^data:([^;,]*)((?:;[^;,]*)*),(.*)$/s.exec(text);
   let declaredMime: string | null = null;
   let bytes: Uint8Array;
 
