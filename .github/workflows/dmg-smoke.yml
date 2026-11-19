@@ -1,0 +1,110 @@
+name: DMG smoke test
+
+# Installs a published release the way a user would and launches it, on an
+# Apple Silicon and an Intel runner. Runs after every Release, or by hand.
+# These are GitHub's virtual macOS machines — useful evidence, but not a
+# substitute for testing on real Intel hardware (see issue #7).
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to test (default: the latest release)
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  dmg:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    name: DMG on ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      APP: /Applications/Toolbox.app
+    steps:
+      - name: Machine
+        run: |
+          echo "uname -m: $(uname -m)"; sysctl -n machdep.cpu.brand_string; sw_vers
+          test "$(uname -m)" = "${{ matrix.arch }}"
+      - name: Download the release
+        run: |
+          TAG="${{ inputs.tag }}"
+          [ -n "$TAG" ] || TAG="$(gh release view -R "$GITHUB_REPOSITORY" --json tagName -q .tagName)"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.dmg' -p SHA256SUMS.txt
+          shasum -a 256 -c SHA256SUMS.txt
+      - name: Install from the DMG
+        run: |
+          DMG="$(ls *.dmg)"
+          hdiutil attach -nobrowse -readonly -mountpoint /Volumes/ToolboxSmoke "$DMG"
+          test -L /Volumes/ToolboxSmoke/Applications
+          ditto /Volumes/ToolboxSmoke/Toolbox.app "$APP"
+          hdiutil detach /Volumes/ToolboxSmoke
+      - name: Check the bundle
+        run: |
+          BIN="$APP/Contents/MacOS/toolbox"
+          lipo -archs "$BIN" | tee /dev/stderr | grep -q x86_64
+          lipo -archs "$BIN" | grep -q arm64
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          VERSION="$(plutil -extract CFBundleShortVersionString raw "$APP/Contents/Info.plist")"
+          echo "version $VERSION, minimum macOS $(plutil -extract LSMinimumSystemVersion raw "$APP/Contents/Info.plist")"
+          test "v$VERSION" = "$TAG"
+      - name: Launch
+        run: |
+          open "$APP"
+          for _ in $(seq 1 30); do pgrep -x toolbox >/dev/null && break; sleep 1; done
+          sleep 15
+          PID="$(pgrep -x toolbox)"
+          echo "running as pid $PID"; ps -o pid=,rss=,command= -p "$PID"
+          screencapture -x "screen-${{ matrix.arch }}.png" || true
+          if ls ~/Library/Logs/DiagnosticReports 2>/dev/null | grep -i toolbox; then echo "::error::Toolbox crashed"; exit 1; fi
+          osascript -e 'quit app "Toolbox"' || kill "$PID"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: screen-${{ matrix.arch }}
+          path: screen-*.png
+          if-no-files-found: ignore
+
+  cask:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    name: Homebrew cask on ${{ matrix.arch }}
+    needs: dmg
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - name: Install with brew
+        run: |
+          brew update --quiet
+          brew tap ale-newport/tap
+          brew trust ale-newport/tap 2>/dev/null || true
+          brew install --cask ale-newport/tap/toolbox
+          test -d /Applications/Toolbox.app
+          test -z "$(xattr -p com.apple.quarantine /Applications/Toolbox.app 2>/dev/null)"
+          codesign --verify --deep --strict /Applications/Toolbox.app
+          open /Applications/Toolbox.app
+          for _ in $(seq 1 30); do pgrep -x toolbox >/dev/null && break; sleep 1; done
+          pgrep -x toolbox
+          osascript -e 'quit app "Toolbox"' || pkill -x toolbox
+          brew uninstall --cask toolbox

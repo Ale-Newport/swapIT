@@ -39,11 +39,25 @@ or creating an account.
 
 ## Quick start
 
-**Download:** grab `Toolbox_<version>_universal.dmg` from the
-[latest release](https://github.com/Ale-Newport/swapIT/releases/latest), open it and drag
-Toolbox to Applications. The build is ad-hoc signed (no paid Apple Developer ID), so the
-first time, right-click the app › **Open** — or run
-`xattr -dr com.apple.quarantine /Applications/Toolbox.app`. [Why?](#about-signing)
+**With Homebrew** (recommended — universal, verified checksum, easy updates):
+
+```bash
+brew install --cask ale-newport/tap/toolbox
+```
+
+**Or download** `Toolbox_<version>_universal.dmg` from the
+[latest release](https://github.com/Ale-Newport/swapIT/releases/latest) (Apple Silicon and
+Intel, macOS 11+), open it and drag Toolbox to Applications. The build is ad-hoc signed,
+not notarised, so macOS blocks the first launch of a downloaded copy. Clear the download
+flag once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Toolbox.app
+```
+
+or open it, then go to **System Settings › Privacy & Security** and click **Open Anyway**
+(on macOS 14 and earlier, right-click the app › **Open** also works).
+`SHA256SUMS.txt` on the release lets you check the download. [Why is it not notarised?](#about-signing)
 
 **Or build and install it in one command** (needs Node.js 20+ and Rust):
 
@@ -294,17 +308,24 @@ insists on a notarised Developer ID signature for software that arrives carrying
 **quarantine** flag, and that flag is set on downloads, not on a local copy.
 `scripts/install-app.sh` strips it regardless.
 
-If you copy the `.dmg` to another Mac and open it there, the app *will* be
-quarantined and macOS will refuse it on first launch. Either right-click the app and
-choose **Open** (then confirm once), or clear the flag:
+If you download the `.dmg` (or copy it to another Mac), the app *will* be quarantined
+and macOS will refuse it on first launch. Clear the flag, or open it once and allow it
+in **System Settings › Privacy & Security › Open Anyway** (macOS 15 removed the
+right-click › Open shortcut for apps that are not notarised). To clear the flag:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/Toolbox.app
 ```
 
-Notarising properly would need a paid Apple Developer account; set
-`APPLE_ID`, `APPLE_PASSWORD` and `APPLE_TEAM_ID` and Tauri will do it during
-`build:app`.
+The [Homebrew cask](https://github.com/Ale-Newport/homebrew-tap) does this for you after
+installing.
+
+Notarising needs a **Developer ID Application** certificate from the Apple Developer
+Program (an App Store "Apple Distribution" certificate is not enough) plus an
+app-specific password; with `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` and
+`APPLE_TEAM_ID` set, Tauri signs and notarises during `build:app`. Every release is also
+installed and launched on Apple Silicon and Intel runners by the *DMG smoke test*
+workflow.
 
 `npm run tauri build` on its own builds only the `.app`. The DMG is a separate script
 on purpose: Tauri's own DMG bundler lays out the installer window by driving Finder

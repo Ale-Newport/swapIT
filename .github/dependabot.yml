@@ -11,6 +11,14 @@ updates:
       day: monday
     open-pull-requests-limit: 3
     labels: [dependencies, javascript]
+    ignore:
+      # js-yaml 5 changed its schema API; the migration is tracked in #30.
+      - dependency-name: js-yaml
+        update-types: ["version-update:semver-major"]
+      # typescript-eslint supports TypeScript < 6.1 only (TS 7 has no JS API yet):
+      # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+      - dependency-name: typescript
+        versions: [">= 7"]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
