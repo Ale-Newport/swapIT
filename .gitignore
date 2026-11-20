@@ -33,3 +33,34 @@ dist-web
 .claude/
 .idea/
 *.swp
+
+# Icons `tauri icon` generates for platforms Toolbox does not ship (Android,
+# iOS, Windows Store). The macOS bundle uses only the files in tauri.conf.json.
+src-tauri/icons/android/
+src-tauri/icons/ios/
+src-tauri/icons/Square*Logo.png
+src-tauri/icons/StoreLogo.png
+
+# Private promotion drafts — kept locally, never published
+LAUNCH*.md
+launch/
+docs/launch/
+docs/LAUNCH*.md
+
+# AI-assistant and editor agent files
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.cursor/
+.cursorrules
+.aider*
+.codex/
+.windsurf/
+.continue/
+
+# Local backups, reports and scratch files
+*.bak
+*.orig
+*.tmp
+*.backup
+*~
