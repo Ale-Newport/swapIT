@@ -436,6 +436,11 @@ pub fn set_layout(app: &AppHandle, layout: LayoutArgs) {
     STATE.lock().expect("radial state poisoned").sticky = layout.sticky;
 }
 
+/// Whether the ring window is actually ordered in, whatever the bookkeeping says.
+pub fn is_on_screen(app: &AppHandle) -> bool {
+    app.get_webview_window(LABEL).and_then(|w| w.is_visible().ok()).unwrap_or(false)
+}
+
 pub fn is_visible() -> bool {
     STATE.lock().map(|s| s.visible).unwrap_or(false)
 }

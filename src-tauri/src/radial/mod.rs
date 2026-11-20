@@ -151,10 +151,30 @@ pub fn cache_dir() -> std::path::PathBuf {
 
 /// Called once from `setup`: build the hidden window, then bring settings to life.
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
+    keep_responsive();
     window::create(app)?;
     reconcile(app);
     Ok(())
 }
+
+/// Opt out of App Nap for the life of the process.
+///
+/// Toolbox is a menu bar app that spends most of its time with no visible window, which is
+/// exactly what macOS puts to sleep. A napping app still receives the global shortcut, but its
+/// main thread is throttled, so the ring shows late or not at all until something wakes the app
+/// again (clicking its menu bar icon does). The activity allows the system itself to sleep.
+#[cfg(target_os = "macos")]
+fn keep_responsive() {
+    use objc2_foundation::{NSActivityOptions, NSProcessInfo, NSString};
+    let reason = NSString::from_str("Listening for the global shortcuts");
+    let token = NSProcessInfo::processInfo()
+        .beginActivityWithOptions_reason(NSActivityOptions::UserInitiatedAllowingIdleSystemSleep, &reason);
+    // The activity lasts as long as the token is alive: keep it for the whole run.
+    std::mem::forget(token);
+}
+
+#[cfg(not(target_os = "macos"))]
+fn keep_responsive() {}
 
 /// Bring shortcuts, drag monitor, tray and dock policy in line with the settings.
 /// Idempotent; called at startup and after every `update_settings`.
@@ -305,10 +325,16 @@ pub fn on_shortcut_pressed(app: &AppHandle, kind: &str) {
             (st.visible, st.drag_mode)
         })
         .unwrap_or((false, false));
-    // Pressing the shortcut again while the ring is up closes it.
-    if kind == "radial" && visible && !drag_mode {
+    // Pressing the shortcut again while the ring is up closes it — but only if it really is up.
+    // If the state says "visible" while the window is gone (the ring was dismissed by a path
+    // that never reported it), this press would only "close" nothing and look like a dead key.
+    let really_up = visible && window::is_on_screen(app);
+    if kind == "radial" && really_up && !drag_mode {
         window::hide(app, true);
         return;
+    }
+    if visible && !really_up {
+        window::hide(app, false);
     }
     let hold = (kind == "radial" && cfg.hold_to_select).then_some(kind);
     show_with_finder(app, trigger, intent, hold);

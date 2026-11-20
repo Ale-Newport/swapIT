@@ -37,7 +37,7 @@ objc2 = "0.6"
 block2 = "0.6"
 objc2-foundation = { version = "0.3", default-features = false, features = [
     "std", "NSArray", "NSData", "NSDictionary", "NSGeometry", "NSObject", "NSSet",
-    "NSString", "NSURL", "NSValue", "objc2-core-foundation",
+    "NSString", "NSURL", "NSValue", "NSProcessInfo", "objc2-core-foundation",
 ] }
 objc2-app-kit = { version = "0.3", default-features = false, features = [
     "std", "block2", "bitflags", "libc", "NSAppearance", "NSApplication", "NSEvent", "NSImage",
