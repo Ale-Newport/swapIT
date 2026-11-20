@@ -92,3 +92,23 @@ jobs:
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  workflows:
+    name: Workflow lint (actionlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install actionlint (checksum-verified release)
+        env:
+          VERSION: 1.7.12
+        run: |
+          base="https://github.com/rhysd/actionlint/releases/download/v${VERSION}"
+          file="actionlint_${VERSION}_linux_amd64.tar.gz"
+          curl -fsSLO "$base/$file"
+          curl -fsSL "$base/actionlint_${VERSION}_checksums.txt" | grep " $file\$" | sha256sum -c -
+          tar -xzf "$file" actionlint
+      # shellcheck is preinstalled on ubuntu-latest; actionlint runs it on every run: block.
+      - run: shellcheck --version && ./actionlint -color

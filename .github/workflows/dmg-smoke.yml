@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to test (default: the latest release)
+        description: "Release tag to test (default: the latest release)"
         required: false
 
 permissions:
@@ -48,7 +48,8 @@ jobs:
           shasum -a 256 -c SHA256SUMS.txt
       - name: Install from the DMG
         run: |
-          DMG="$(ls *.dmg)"
+          set -- ./*.dmg
+          DMG="$1"
           hdiutil attach -nobrowse -readonly -mountpoint /Volumes/ToolboxSmoke "$DMG"
           test -L /Volumes/ToolboxSmoke/Applications
           ditto /Volumes/ToolboxSmoke/Toolbox.app "$APP"
@@ -70,7 +71,7 @@ jobs:
           PID="$(pgrep -x toolbox)"
           echo "running as pid $PID"; ps -o pid=,rss=,command= -p "$PID"
           screencapture -x "screen-${{ matrix.arch }}.png" || true
-          if ls ~/Library/Logs/DiagnosticReports 2>/dev/null | grep -i toolbox; then echo "::error::Toolbox crashed"; exit 1; fi
+          if find ~/Library/Logs/DiagnosticReports -iname "*toolbox*" 2>/dev/null | grep -q .; then echo "::error::Toolbox crashed"; exit 1; fi
           osascript -e 'quit app "Toolbox"' || kill "$PID"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
