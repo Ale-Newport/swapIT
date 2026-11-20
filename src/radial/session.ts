@@ -1,3 +1,4 @@
+import { keepAwakeStatus, type AwakeStatus } from '@/core/awake';
 import { inspectPaths } from '@/core/bridge';
 import { clipboardSummary, defaultFolders, type ClipboardSummary } from '@/core/quick';
 import { useSettings } from '@/core/settings';
@@ -34,6 +35,7 @@ async function resolveFolder(payload: RadialOpenPayload): Promise<string> {
 
 let sequence = 0;
 let lastClipboard: ClipboardSummary | null = null;
+let lastAwake: AwakeStatus | null = null;
 
 /** Never let a slow side-query hold the ring back: take its answer if it is quick, else move on. */
 function soon<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -50,9 +52,9 @@ function findById(items: RadialItem[], id: string): RadialItem | undefined {
 }
 
 /** The menu for these files, with the user's own rings and the helper programs found so far. */
-function menuFor(files: FileInfo[], folder: string | null, intent: string, clipboard: ClipboardSummary | null) {
+function menuFor(files: FileInfo[], folder: string | null, intent: string, clipboard: ClipboardSummary | null, awake: AwakeStatus | null = lastAwake) {
   const settings = useSettings.getState().settings;
-  return buildMenu({ files, folder, bins: binsNow() ?? {}, settings, layouts: settings.radialLayouts, intent, clipboard });
+  return buildMenu({ files, folder, bins: binsNow() ?? {}, settings, layouts: settings.radialLayouts, intent, clipboard, awake });
 }
 
 /** Rebuild the menu for the current files — used when late information (helper programs) arrives. */
@@ -91,16 +93,18 @@ export async function openSession(payload: RadialOpenPayload): Promise<void> {
 
   // Everything the ring needs, fetched side by side: the slowest of these is the ring's latency.
   const settingsReady = useSettings.getState().load();
-  const [files, folder, clipboard] = await Promise.all([
+  const [files, folder, clipboard, awake] = await Promise.all([
     payload.paths.length > 0 ? inspectPaths(payload.paths).catch(() => [] as FileInfo[]) : Promise.resolve([] as FileInfo[]),
     settingsReady.then(() => resolveFolder(payload)),
     soon(clipboardSummary().catch(() => null), 220, null),
+    soon(keepAwakeStatus().catch(() => null), 220, null),
   ]);
   if (mine !== sequence) return;
   lastClipboard = clipboard;
+  lastAwake = awake;
 
   const known = binsNow();
-  const { root, pool } = menuFor(files, folder, payload.intent, clipboard);
+  const { root, pool } = menuFor(files, folder, payload.intent, clipboard, awake);
   radial.patch({ files, folder, root, pool, stack: [], hover: null, query: '' });
   // First ever open: dim what cannot run as soon as the probe finishes, without having waited for it.
   if (!known) void loadBins().then(() => mine === sequence && rebuild());

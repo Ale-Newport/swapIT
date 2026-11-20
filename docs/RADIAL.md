@@ -229,6 +229,21 @@ camelCase JSON. Names are Finder-style: `Untitled.md`, `Untitled 2.md`, `report 
 | `read_text_file` | `path, maxBytes?` | `string` |
 | `default_folders` | – | `{ desktop, documents, downloads, home }` |
 
+### Keep awake (`cmd/awake.rs`)
+
+The *More › Keep awake ›* petal of the create ring (30 min, 1, 2, 4, 8 hours, until stopped). It runs
+`/usr/bin/caffeinate -i -m -s [-t secs] -w <toolbox pid>`: idle sleep and disk sleep are held, the display is
+not, and `-s` keeps a closed lid from sleeping the Mac — which macOS only honours **on AC power**, hence
+`onBattery` in the result (the pill then says "plug in to close the lid"). `-w` ties the assertion to Toolbox,
+so quitting or crashing releases it; it is also killed on `RunEvent::Exit`. One session at a time: starting a
+new one replaces the old one. While one runs, the ring opens its sub-ring with *Stop* first.
+
+| command | args | returns |
+| --- | --- | --- |
+| `keep_awake_start` | `minutes: number \| null` (1 … 10080; `null` = until stopped) | `AwakeStatus` |
+| `keep_awake_stop` | – | `AwakeStatus` |
+| `keep_awake_status` | – | `{ active, startedAt, endsAt, onBattery }` (ms since epoch) |
+
 ---
 
 ## 7. Watch folders

@@ -1,4 +1,5 @@
 pub mod archives;
+pub mod awake;
 pub mod files;
 pub mod hashing;
 pub mod images;

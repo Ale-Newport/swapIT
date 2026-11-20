@@ -405,7 +405,10 @@ pub fn on_run_event(app: &AppHandle, event: &RunEvent) {
     match event {
         RunEvent::Opened { urls } => handle_opened(app, urls),
         RunEvent::Reopen { has_visible_windows, .. } if !*has_visible_windows => open_main_window(app),
-        RunEvent::Exit => drag::stop(),
+        RunEvent::Exit => {
+            drag::stop();
+            crate::cmd::awake::shutdown();
+        }
         _ => {}
     }
 }

@@ -252,6 +252,25 @@ describe('with nothing selected', () => {
     );
   });
 
+  it('offers Keep awake with a choice of times under More', () => {
+    const more = menuOf(menu, 'menu:more');
+    const awake = menuOf(menu, 'menu:awake');
+    expect(more?.children?.some((i) => i.id === 'menu:awake')).toBe(true);
+    expect(awake?.children?.map((i) => i.id)).toEqual(['awake:30m', 'awake:1h', 'awake:2h', 'awake:4h', 'awake:8h', 'awake:forever']);
+    expect(more?.children?.length).toBeLessThanOrEqual(6);
+    expect(searchItems(menu.pool, 'caffeinate').map((i) => i.id)).toContain('awake:2h');
+    expect(searchItems(menu.pool, 'sleep').map((i) => i.id)).toContain('awake:forever');
+  });
+
+  it('leads with Stop while it is on, and still fits six petals', () => {
+    const on = buildMenu({ files: [], folder: '/x', bins: ALL, settings, intent: 'ring', clipboard: null, awake: { active: true, startedAt: 1, endsAt: Date.now() + 3_600_000, onBattery: false } });
+    const awake = menuOf(on, 'menu:awake')!;
+    expect(awake.children?.map((i) => i.id)).toEqual(['awake:stop', 'awake:1h', 'awake:2h', 'awake:4h', 'awake:8h', 'awake:forever']);
+    expect(awake.children?.[0].unavailable).toBeUndefined();
+    // Not running: Stop is not on the ring, and cannot be run if reached by typing.
+    expect(menu.pool.find((i) => i.id === 'awake:stop')?.unavailable).toBeTruthy();
+  });
+
   it('describes what is on the clipboard on the Paste petal', () => {
     expect(menu.root.find((i) => i.id === 'create:paste')?.hint).toContain('hello');
     const empty = buildMenu({ files: [], folder: '/x', bins: ALL, settings, intent: 'ring', clipboard: { kind: 'empty', preview: '', count: 0 } });

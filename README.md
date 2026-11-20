@@ -165,7 +165,8 @@ with the files already loaded.
 **Create from Finder.** *Text file*, *Markdown* (with meeting-notes, daily-note, to-do, README and blog-post
 templates; the file is named after your first heading), 14 file types in all, *Record audio* (live waveform, pause,
 M4A natively, MP3/WAV when FFmpeg is present), *Paste as file*, *Daily note*, *Text from screen* (drag over any text
-and OCR copies it), *QR from clipboard*, and a few clipboard helpers (UUID, password, date).
+and OCR copies it), *QR from clipboard*, a few clipboard helpers (UUID, password, date), and *Keep awake*
+(30 minutes to 8 hours, or until you stop it — `caffeinate` under the hood; a closed lid needs the charger).
 
 **Watch folders.** Pick a folder and an action — "convert every new HEIC in Downloads to JPG",
 "compress screenshots" — and it happens as files arrive, once they have finished writing. Results

@@ -160,6 +160,10 @@ pub fn run() {
             cmd::quick::file_thumbnail,
             cmd::quick::read_text_file,
             cmd::quick::default_folders,
+            // keep awake (caffeinate)
+            cmd::awake::keep_awake_start,
+            cmd::awake::keep_awake_stop,
+            cmd::awake::keep_awake_status,
             // radial (native layer)
             radial::commands::radial_show,
             radial::commands::radial_hide,

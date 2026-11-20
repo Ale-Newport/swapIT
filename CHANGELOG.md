@@ -6,6 +6,12 @@ All notable changes to Toolbox are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Keep awake** in the radial menu (*More › Keep awake*): keep the Mac on for 30 minutes, 1, 2,
+  4 or 8 hours, or until you stop it. It uses `caffeinate`, lets the screen turn off, and with
+  the Mac plugged in it keeps running with the lid closed. It ends when Toolbox quits.
+
 ## [0.2.0] — 2026-11-20
 
 ### Added

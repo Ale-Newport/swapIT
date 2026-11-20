@@ -1,9 +1,11 @@
 import { toolsForFiles, visibleTools } from '@/core/registry';
+import type { AwakeStatus } from '@/core/awake';
 import type { ClipboardSummary } from '@/core/quick';
 import type { FileInfo } from '@/core/types';
 import type { RadialItem } from '../model';
 import { applyLayout, layoutKeyFor, leaves, sanitizeLayouts } from '../layouts';
 import { flattenItems } from '../menu';
+import { awakeParts } from './awake';
 import { clipboardItems, createItems, newFileItems } from './create';
 import { convertItems } from './convert';
 import { editItems } from './edit';
@@ -27,6 +29,8 @@ import { compact, menu, preferAvailable, shortLabel, ui, type CatalogInput } fro
 export interface BuildArgs extends CatalogInput {
   intent: string;
   clipboard: ClipboardSummary | null;
+  /** Whether the Mac is being kept awake right now; unknown (null) reads as "not". */
+  awake?: AwakeStatus | null;
   /** The user's own rings (`radialLayouts` in the settings), as stored. */
   layouts?: unknown;
 }
@@ -262,7 +266,7 @@ function filesRoot(input: CatalogInput, parts: { all: Map<string, RadialItem>; c
 
 // ------------------------------------------------------------------ create
 
-function createRoot(input: CatalogInput, clipboard: ClipboardSummary | null): RadialItem[] {
+function createRoot(input: CatalogInput, clipboard: ClipboardSummary | null, awakeMenu: RadialItem | null): RadialItem[] {
   const create = new Map(createItems(input, clipboard).map((i) => [i.id, i]));
   const types = new Map(newFileItems().map((i) => [i.id, i]));
   const clip = clipboardItems();
@@ -309,7 +313,7 @@ function createRoot(input: CatalogInput, clipboard: ClipboardSummary | null): Ra
     label: 'More',
     title: 'More things to make',
     icon: 'Ellipsis',
-    children: [create.get('create:daily'), create.get('create:ocr-screen'), clip.find((i) => i.id === 'clip:qr'), clipboardMenu, create.get('create:app')],
+    children: [create.get('create:daily'), create.get('create:ocr-screen'), awakeMenu, clip.find((i) => i.id === 'clip:qr'), clipboardMenu, create.get('create:app')],
   });
   return compact([create.get('create:text'), create.get('create:markdown'), create.get('create:record'), newFile, create.get('create:paste'), more]);
 }
@@ -326,18 +330,19 @@ export function buildMenu(args: BuildArgs): MenuModel {
   const types = newFileItems();
   const clip = clipboardItems();
   const tools = toolboxEntries(files);
+  const awake = awakeParts(args.awake ?? null);
 
   const layout = sanitizeLayouts(args.layouts)[layoutKeyFor(files)];
 
   if (files.length === 0) {
-    const standard = createRoot(input, clipboard);
-    const candidates = leaves([...standard, ...create, ...types, ...clip]);
+    const standard = createRoot(input, clipboard, awake.menu);
+    const candidates = leaves([...standard, ...create, ...types, ...clip, ...awake.leaves]);
     return {
       root: applyLayout(standard, candidates, layout),
       standard,
       candidates,
       // Switching an action off takes it off the ring, not out of reach: typing still finds it.
-      pool: dedupe([...flattenItems(standard), ...create, ...types, ...clip, ...tools]),
+      pool: dedupe([...flattenItems(standard), ...create, ...types, ...clip, ...awake.leaves, ...tools]),
     };
   }
 
@@ -361,6 +366,7 @@ export function buildMenu(args: BuildArgs): MenuModel {
     ...create,
     ...types,
     ...clip,
+    ...awake.leaves,
     ...tools,
   ]);
   return { root, standard, candidates, pool };

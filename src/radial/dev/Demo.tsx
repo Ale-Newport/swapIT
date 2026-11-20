@@ -37,6 +37,8 @@ function fakeIcon(label: string): string {
 
 let layoutListener: ((l: RadialLayout) => void) | null = null;
 const log: string[] = [];
+const IDLE_AWAKE = { active: false, startedAt: null, endsAt: null, onBattery: false };
+let awakeDemo: { active: boolean; startedAt: number; endsAt: number | null; onBattery: boolean } | null = null;
 
 mockIPC(
   (cmd, payload) => {
@@ -93,6 +95,16 @@ mockIPC(
         return fakeIcon(String(args.path));
       case 'clipboard_summary':
         return { kind: 'text', preview: 'https://example.com/a-long-link-copied-earlier', count: 48 };
+      case 'keep_awake_status':
+        return awakeDemo ?? IDLE_AWAKE;
+      case 'keep_awake_stop':
+        awakeDemo = null;
+        return IDLE_AWAKE;
+      case 'keep_awake_start': {
+        const now = Date.now();
+        awakeDemo = { active: true, startedAt: now, endsAt: args.minutes ? now + Number(args.minutes) * 60_000 : null, onBattery: false };
+        return awakeDemo;
+      }
       case 'default_folders':
         return { desktop: '/Users/demo/Desktop', documents: '/Users/demo/Documents', downloads: '/Users/demo/Downloads', home: '/Users/demo' };
       case 'radial_set_layout':
